@@ -75,7 +75,7 @@ export function ReceivablesList({ receivables, searchQuery, onSearchChange, onDe
               <span className="text-xs text-slate-400 dark:text-slate-500">({borrowersInType.length})</span>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               <AnimatePresence mode="popLayout">
                 {borrowersInType.map((r) => (
                   <motion.div 
@@ -84,28 +84,28 @@ export function ReceivablesList({ receivables, searchQuery, onSearchChange, onDe
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group"
+                    className="bg-white dark:bg-slate-900 rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm ${getTypeColor(r.type)}`}>
-                          {getIcon(r.type)}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center space-x-3 md:space-x-4 min-w-0">
+                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center text-white shadow-sm shrink-0 ${getTypeColor(r.type)}`}>
+                          <span className="scale-75 md:scale-100">{getIcon(r.type)}</span>
                         </div>
-                        <div>
-                          <h3 className="font-bold text-slate-900 dark:text-white">{r.name}</h3>
-                          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{r.type}</span>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-slate-900 dark:text-white truncate text-sm md:text-base">{r.name}</h3>
+                          <span className="text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate block">{r.type}</span>
                         </div>
                       </div>
                       <button 
                         onClick={() => onDelete(r)}
-                        className="p-2 text-slate-200 dark:text-slate-700 hover:text-rose-500 dark:hover:text-rose-400 transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-2 text-slate-200 dark:text-slate-700 hover:text-rose-500 dark:hover:text-rose-400 transition-colors md:opacity-0 md:group-hover:opacity-100 shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="mt-6 flex items-center justify-between">
-                      <span className="text-xs text-slate-500 dark:text-slate-400">Total Pinjaman</span>
-                      <span className="text-lg font-black text-slate-900 dark:text-white">{formatCurrency(r.amount)}</span>
+                    <div className="mt-4 md:mt-6 flex items-center justify-between gap-2">
+                      <span className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 shrink-0">Total Pinjaman</span>
+                      <span className="text-base md:text-lg font-black text-slate-900 dark:text-white truncate">{formatCurrency(r.amount)}</span>
                     </div>
                   </motion.div>
                 ))}
@@ -120,21 +120,21 @@ export function ReceivablesList({ receivables, searchQuery, onSearchChange, onDe
           <div className="flex items-center space-x-2 opacity-50">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Peminjam Nonaktif</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-60 grayscale">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 opacity-60 grayscale">
             {filteredInactive.map((r) => (
-              <div key={r.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm ${getTypeColor(r.type)} opacity-50`}>
-                    {getIcon(r.type)}
+              <div key={r.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-3 md:space-x-4 min-w-0">
+                  <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center text-white shadow-sm shrink-0 ${getTypeColor(r.type)} opacity-50`}>
+                    <span className="scale-75 md:scale-100">{getIcon(r.type)}</span>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-slate-500 dark:text-slate-400">{r.name}</h3>
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{r.type}</span>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-slate-500 dark:text-slate-400 truncate text-sm md:text-base">{r.name}</h3>
+                    <span className="text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate block">{r.type}</span>
                   </div>
                 </div>
                 <button 
                   onClick={() => onToggleStatus(r.id, true)}
-                  className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hover:underline"
+                  className="text-[9px] md:text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hover:underline shrink-0"
                 >
                   Aktifkan
                 </button>

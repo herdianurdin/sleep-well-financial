@@ -30,7 +30,7 @@ export default function ManageTransactionsPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-8 animate-pulse">
+      <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto space-y-8 animate-pulse">
         <div className="h-10 bg-slate-200 rounded-xl w-1/4 mb-4"></div>
         <div className="h-6 bg-slate-200 rounded-xl w-1/3 mb-8"></div>
         <div className="h-24 bg-slate-200 rounded-3xl w-full mb-8"></div>
@@ -40,10 +40,10 @@ export default function ManageTransactionsPage() {
   }
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto space-y-6">
       <header>
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Catat Transaksi</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Integrasi otomatis dengan Kas, Piutang, Pinjaman, dan Aset</p>
+        <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Catat Transaksi</h1>
+        <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Integrasi otomatis dengan Kas, Piutang, Pinjaman, dan Aset</p>
       </header>
 
       <TransactionCategorySelector 
@@ -61,9 +61,9 @@ export default function ManageTransactionsPage() {
         onSubmit={handleSubmit}
       />
 
-      <div className="p-5 bg-slate-50 dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-start space-x-3 transition-colors">
-        <CircleAlert className="w-5 h-5 text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
-        <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+      <div className="p-4 md:p-5 bg-slate-50 dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-start space-x-3 transition-colors">
+        <CircleAlert className="w-4 h-4 md:w-5 md:h-5 text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
+        <div className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
           <p className="font-bold text-slate-700 dark:text-slate-300 mb-0.5">Sistem Auto-Sync Aktif</p>
           Setiap transaksi yang Anda simpan akan langsung memperbarui saldo di menu terkait. 
           Misal: Membayar hutang akan otomatis mengurangi saldo kas Anda dan mengurangi sisa hutang di menu Kelola Pinjaman.

@@ -23,6 +23,8 @@ export const firebaseService = {
       await set(userRef, cleanData({
         settings: {
           threshold: initialData.threshold || 0,
+          monthlyLivingCost: initialData.monthlyLivingCost || 0,
+          livingCondition: initialData.livingCondition || 'parents_no_demands',
           mainWalletId: initialData.mainWalletId || '',
           privacyMode: initialData.privacyMode || false,
           sessionTimeout: initialData.sessionTimeout || '30 Menit',
@@ -50,10 +52,9 @@ export const firebaseService = {
 
   // --- Cash Positions ---
   addCashPosition: async (userId: string, data: any) => {
-    const listRef = ref(db, `cashPositions/${userId}`);
-    const newRef = push(listRef);
-    await set(newRef, cleanData({ ...data, id: newRef.key, updatedAt: Date.now() }));
-    return newRef.key;
+    const itemRef = ref(db, `cashPositions/${userId}/${data.id}`);
+    await set(itemRef, cleanData({ ...data, updatedAt: Date.now() }));
+    return data.id;
   },
   updateCashPosition: async (userId: string, cashId: string, data: any) => {
     const itemRef = ref(db, `cashPositions/${userId}/${cashId}`);
@@ -66,10 +67,9 @@ export const firebaseService = {
 
   // --- Assets ---
   addAsset: async (userId: string, data: any) => {
-    const listRef = ref(db, `assets/${userId}`);
-    const newRef = push(listRef);
-    await set(newRef, cleanData({ ...data, id: newRef.key, updatedAt: Date.now() }));
-    return newRef.key;
+    const itemRef = ref(db, `assets/${userId}/${data.id}`);
+    await set(itemRef, cleanData({ ...data, updatedAt: Date.now() }));
+    return data.id;
   },
   updateAsset: async (userId: string, assetId: string, data: any) => {
     const itemRef = ref(db, `assets/${userId}/${assetId}`);
@@ -82,10 +82,9 @@ export const firebaseService = {
 
   // --- Receivables ---
   addReceivable: async (userId: string, data: any) => {
-    const listRef = ref(db, `receivables/${userId}`);
-    const newRef = push(listRef);
-    await set(newRef, cleanData({ ...data, id: newRef.key, updatedAt: Date.now() }));
-    return newRef.key;
+    const itemRef = ref(db, `receivables/${userId}/${data.id}`);
+    await set(itemRef, cleanData({ ...data, updatedAt: Date.now() }));
+    return data.id;
   },
   updateReceivable: async (userId: string, receivableId: string, data: any) => {
     const itemRef = ref(db, `receivables/${userId}/${receivableId}`);
@@ -98,10 +97,9 @@ export const firebaseService = {
 
   // --- Loans ---
   addLoan: async (userId: string, data: any) => {
-    const listRef = ref(db, `loans/${userId}`);
-    const newRef = push(listRef);
-    await set(newRef, cleanData({ ...data, id: newRef.key, updatedAt: Date.now() }));
-    return newRef.key;
+    const itemRef = ref(db, `loans/${userId}/${data.id}`);
+    await set(itemRef, cleanData({ ...data, updatedAt: Date.now() }));
+    return data.id;
   },
   updateLoan: async (userId: string, loanId: string, data: any) => {
     const itemRef = ref(db, `loans/${userId}/${loanId}`);
@@ -124,12 +122,45 @@ export const firebaseService = {
     await set(periodsRef, cleanData(periods));
   },
 
+  wipeAllData: async (userId: string) => {
+    const updates: any = {};
+    updates[`users/${userId}`] = null;
+    updates[`cashPositions/${userId}`] = null;
+    updates[`assets/${userId}`] = null;
+    updates[`receivables/${userId}`] = null;
+    updates[`loans/${userId}`] = null;
+    updates[`transactions/${userId}`] = null;
+    
+    await update(ref(db), updates);
+  },
+
+  syncBalances: async (userId: string, state: any) => {
+    const updates: any = {};
+    
+    const toObject = (arr: any[]) => {
+      if (!arr || arr.length === 0) return null;
+      return arr.reduce((acc, item) => {
+        acc[item.id] = cleanData(item);
+        return acc;
+      }, {});
+    };
+
+    updates[`cashPositions/${userId}`] = toObject(state.cashPositions);
+    updates[`assets/${userId}`] = toObject(state.assets);
+    updates[`receivables/${userId}`] = toObject(state.receivables);
+    updates[`loans/${userId}`] = toObject(state.loans);
+
+    await update(ref(db), updates);
+  },
+
   // --- Sync Listeners ---
   syncFullState: async (userId: string, state: any) => {
     const updates: any = {};
     
     updates[`users/${userId}/settings`] = cleanData({
       threshold: state.threshold,
+      monthlyLivingCost: state.monthlyLivingCost,
+      livingCondition: state.livingCondition,
       mainWalletId: state.mainWalletId,
       privacyMode: state.privacyMode,
       sessionTimeout: state.sessionTimeout,
@@ -149,7 +180,20 @@ export const firebaseService = {
     updates[`assets/${userId}`] = toObject(state.assets);
     updates[`receivables/${userId}`] = toObject(state.receivables);
     updates[`loans/${userId}`] = toObject(state.loans);
-    // transactions are no longer synced here to support bucketing
+    updates[`users/${userId}/availablePeriods`] = cleanData(state.availablePeriods);
+    
+    // Sync transactions with bucketing
+    if (state.transactions && state.transactions.length > 0) {
+      state.transactions.forEach((t: any) => {
+        const d = new Date(t.date);
+        const year = d.getFullYear().toString();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        updates[`transactions/${userId}/${year}/${month}/${t.id}`] = cleanData({
+          ...t,
+          timestamp: t.timestamp || Date.now()
+        });
+      });
+    }
 
     await update(ref(db), updates);
   },

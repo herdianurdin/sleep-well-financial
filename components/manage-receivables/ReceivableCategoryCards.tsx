@@ -58,10 +58,10 @@ export function ReceivableCategoryCards({ receivables, receivableCategories, onU
       {(['B2B', 'Keluarga', 'Rekan Kerja', 'Ikut Transaksi'] as const).map((type) => {
         const stats = getCategoryStats(type);
         return (
-          <div key={type} className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col space-y-4">
+          <div key={type} className="bg-white dark:bg-slate-900 rounded-2xl md:rounded-3xl p-4 md:p-5 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col space-y-3 md:space-y-4">
             <div className="flex items-center justify-between">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md ${getTypeColor(type)}`}>
-                {getIcon(type)}
+              <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center text-white shadow-md ${getTypeColor(type)}`}>
+                <span className="scale-75 md:scale-100">{getIcon(type)}</span>
               </div>
               {editingType === type ? (
                 <div className="flex items-center space-x-1">
@@ -69,7 +69,7 @@ export function ReceivableCategoryCards({ receivables, receivableCategories, onU
                     type="text"
                     value={editLimit}
                     onChange={(e) => setEditLimit(formatInputNumber(e.target.value))}
-                    className="w-24 px-2 py-1 text-[10px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg focus:outline-none font-bold text-slate-900 dark:text-white"
+                    className="w-20 md:w-24 px-2 py-1 text-[10px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg focus:outline-none font-bold text-slate-900 dark:text-white"
                     autoFocus
                   />
                   <button onClick={() => handleUpdateLimit(type)} className="text-emerald-500 dark:text-emerald-400"><Check className="w-4 h-4" /></button>
@@ -88,15 +88,15 @@ export function ReceivableCategoryCards({ receivables, receivableCategories, onU
               )}
             </div>
             
-            <div>
-              <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{type === 'B2B' ? 'Bisnis (B2B)' : type}</h3>
-              <p className="text-lg font-black text-slate-900 dark:text-white">{formatCurrency(stats.totalOwed)}</p>
+            <div className="min-w-0">
+              <h3 className="text-[10px] md:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5 md:mb-1 truncate">{type === 'B2B' ? 'Bisnis (B2B)' : type}</h3>
+              <p className="text-base md:text-lg font-black text-slate-900 dark:text-white truncate">{formatCurrency(stats.totalOwed)}</p>
             </div>
 
             <div className="space-y-2 pt-2 border-t border-slate-50 dark:border-slate-800">
-              <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
+              <div className="flex justify-between text-[9px] md:text-[10px] font-bold uppercase tracking-wider">
                 <span className="text-slate-400 dark:text-slate-500">Sisa Limit</span>
-                <span className={stats.remaining < 0 ? 'text-rose-500 dark:text-rose-400' : 'text-slate-600 dark:text-slate-300'}>
+                <span className={`${stats.remaining < 0 ? 'text-rose-500 dark:text-rose-400' : 'text-slate-600 dark:text-slate-300'} truncate ml-2`}>
                   {stats.limit === 0 ? 'Tanpa Limit' : formatCurrency(stats.remaining)}
                 </span>
               </div>

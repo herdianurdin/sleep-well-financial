@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Wallet, CircleAlert } from 'lucide-react';
+import { Wallet, CircleAlert, Eye, EyeOff } from 'lucide-react';
 import { useFinanceStore } from '@/lib/store';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,6 +12,7 @@ import { firebaseService } from '@/lib/firebase-service';
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const { setLoggedIn, isLoggedIn, hasHydrated, showToast } = useFinanceStore();
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function RegisterPage() {
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPassword(e.target.value.toLowerCase());
+    setPassword(e.target.value);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,16 +119,25 @@ export default function RegisterPage() {
                 required
               />
             </div>
-            <div>
+            <div className="relative">
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={handlePasswordChange}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white focus:border-transparent transition-all text-sm text-slate-900 dark:text-slate-50"
-                placeholder="password"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={handlePasswordChange}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white focus:border-transparent transition-all text-sm text-slate-900 dark:text-slate-50 pr-12"
+                  placeholder="password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
 

@@ -29,19 +29,19 @@ export function TransactionCategorySelector({ selectedType, onSelectType }: Tran
   ];
 
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 gap-2">
+    <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2">
       {categories.map((cat) => (
         <button
           key={cat.id}
           onClick={() => onSelectType(cat.id as any)}
-          className={`p-2.5 rounded-xl border transition-all flex flex-col items-center justify-center gap-1.5 text-center ${
+          className={`p-2 sm:p-2.5 rounded-xl border transition-all flex flex-col items-center justify-center gap-1 sm:gap-1.5 text-center ${
             selectedType === cat.id 
               ? `${cat.bg} dark:bg-slate-800 border-slate-900 dark:border-white shadow-sm` 
               : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500 hover:border-slate-200 dark:hover:border-slate-700'
           }`}
         >
-          <cat.icon className={`w-5 h-5 ${selectedType === cat.id ? cat.color : 'text-slate-300 dark:text-slate-700'}`} />
-          <span className={`text-[9px] font-bold uppercase tracking-wider ${selectedType === cat.id ? 'text-slate-900 dark:text-white' : ''}`}>
+          <cat.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${selectedType === cat.id ? cat.color : 'text-slate-300 dark:text-slate-700'}`} />
+          <span className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wider ${selectedType === cat.id ? 'text-slate-900 dark:text-white' : ''}`}>
             {cat.label}
           </span>
         </button>

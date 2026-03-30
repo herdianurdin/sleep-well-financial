@@ -89,8 +89,8 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
 
   return (
     <>
-      <form onSubmit={handlePreSubmit} className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 space-y-5 transition-colors">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={handlePreSubmit} className="bg-white dark:bg-slate-900 rounded-3xl p-4 md:p-6 shadow-sm border border-slate-100 dark:border-slate-800 space-y-4 md:space-y-6 transition-colors">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {/* Nominal Input - Always Visible */}
           <div className="space-y-1.5">
             <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Nominal Transaksi</label>
@@ -100,7 +100,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
               onChange={(e) => setNominal(formatInputNumber(e.target.value))}
               placeholder="Rp 0"
               required
-              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-lg font-bold text-slate-900 dark:text-white transition-all"
+              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-base md:text-lg font-bold text-slate-900 dark:text-white transition-all"
             />
           </div>
 
@@ -112,7 +112,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
-              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all"
+              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all"
             />
           </div>
 
@@ -128,7 +128,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                   value={posAsal}
                   onChange={(e) => setPosAsal(e.target.value)}
                   placeholder="Contoh: Gaji Bulanan"
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all"
                 />
               </div>
               <div className="space-y-1.5">
@@ -137,7 +137,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                   value={posTujuan}
                   onChange={(e) => setPosTujuan(e.target.value)}
                   required
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
                 >
                   <option value="">Pilih Kas Tujuan</option>
                   {cashPositions.filter(p => p.isActive).map(p => (
@@ -157,7 +157,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                   value={posAsal}
                   onChange={(e) => setPosAsal(e.target.value)}
                   required
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
                 >
                   <option value="">Pilih Kas Asal</option>
                   {cashPositions.filter(p => p.isActive).map(p => (
@@ -172,7 +172,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                   value={posTujuan}
                   onChange={(e) => setPosTujuan(e.target.value)}
                   placeholder="Contoh: Makan Siang"
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all"
                 />
               </div>
             </>
@@ -187,7 +187,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                   value={relatedId}
                   onChange={(e) => setRelatedId(e.target.value)}
                   required
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
                 >
                   <option value="">Pilih Nama Peminjam</option>
                   {receivables.map(r => (
@@ -203,7 +203,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                   value={type === 'Pemberian Piutang' ? posAsal : posTujuan}
                   onChange={(e) => type === 'Pemberian Piutang' ? setPosAsal(e.target.value) : setPosTujuan(e.target.value)}
                   required
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
                 >
                   <option value="">Pilih Kas</option>
                   {cashPositions.filter(p => p.isActive).map(p => (
@@ -223,7 +223,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                   value={relatedId}
                   onChange={(e) => setRelatedId(e.target.value)}
                   required
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
                 >
                   <option value="">Pilih Nama Kreditur</option>
                   {loans.map(l => (
@@ -239,7 +239,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                   value={type === 'Pembayaran Pinjaman' ? posAsal : posTujuan}
                   onChange={(e) => type === 'Pembayaran Pinjaman' ? setPosAsal(e.target.value) : setPosTujuan(e.target.value)}
                   required
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
                 >
                   <option value="">Pilih Kas</option>
                   {cashPositions.filter(p => p.isActive).map(p => (
@@ -259,7 +259,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                   value={relatedId}
                   onChange={(e) => setRelatedId(e.target.value)}
                   required
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
                 >
                   <option value="">Pilih Nama Aset</option>
                   {assets.filter(a => a.isActive).map(a => (
@@ -275,7 +275,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                   value={type === 'Beli Aset' ? posAsal : posTujuan}
                   onChange={(e) => type === 'Beli Aset' ? setPosAsal(e.target.value) : setPosTujuan(e.target.value)}
                   required
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
                 >
                   <option value="">Pilih Kas</option>
                   {cashPositions.filter(p => p.isActive).map(p => (
@@ -295,7 +295,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                   value={posAsal}
                   onChange={(e) => setPosAsal(e.target.value)}
                   required
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
                 >
                   <option value="">Pilih Kas Asal</option>
                   {cashPositions.filter(p => p.isActive).map(p => (
@@ -309,7 +309,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                   value={posTujuan}
                   onChange={(e) => setPosTujuan(e.target.value)}
                   required
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
                 >
                   <option value="">Pilih Kas Tujuan</option>
                   {cashPositions.filter(p => p.isActive).map(p => (
@@ -328,7 +328,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                 <select 
                   value={saleStatus}
                   onChange={(e) => setSaleStatus(e.target.value as any)}
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all appearance-none"
                 >
                   <option value="Impas">Impas (Tidak Untung/Rugi)</option>
                   <option value="Untung">Untung (Profit)</option>
@@ -346,7 +346,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                     onChange={(e) => setProfitOrLossNominal(formatInputNumber(e.target.value))}
                     placeholder="Rp 0"
                     required
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all"
+                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all"
                   />
                 </div>
               )}
@@ -361,7 +361,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
               onChange={(e) => setNotes(e.target.value)}
               placeholder={notesPlaceholder}
               rows={2}
-              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all resize-none"
+              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all resize-none"
             />
           </div>
         </div>
@@ -383,7 +383,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
 
           <button
             type="submit"
-            className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-base font-black rounded-xl hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-xl shadow-slate-100 dark:shadow-none active:scale-[0.98]"
+            className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm md:text-base font-black rounded-xl hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-xl shadow-slate-100 dark:shadow-none active:scale-[0.98]"
           >
             Simpan Transaksi
           </button>
@@ -398,12 +398,12 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800"
+              className="bg-white dark:bg-slate-900 rounded-3xl p-5 md:p-6 max-w-sm md:max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2 text-amber-600 dark:text-amber-400">
-                  <TriangleAlert className="w-5 h-5" />
-                  <h3 className="text-lg font-bold">Konfirmasi Transaksi</h3>
+                  <TriangleAlert className="w-4 h-4 md:w-5 md:h-5" />
+                  <h3 className="text-base md:text-lg font-bold">Konfirmasi</h3>
                 </div>
                 <button 
                   onClick={() => setShowConfirmModal(false)}
@@ -414,8 +414,8 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
               </div>
               
               <div className="space-y-3 mb-6">
-                <p className="text-sm text-slate-600 dark:text-slate-400">Apakah Anda yakin ingin menyimpan transaksi ini?</p>
-                <div className="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-xl space-y-1.5 text-xs">
+                <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400">Apakah Anda yakin ingin menyimpan transaksi ini?</p>
+                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl space-y-1.5 text-[10px] md:text-xs">
                   <div className="flex justify-between">
                     <span className="text-slate-500 dark:text-slate-400">Tipe:</span>
                     <span className="font-bold text-slate-900 dark:text-white">{type}</span>
@@ -431,7 +431,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                   {notes && (
                     <div className="flex justify-between">
                       <span className="text-slate-500 dark:text-slate-400">Catatan:</span>
-                      <span className="font-bold text-slate-900 dark:text-white text-right max-w-[180px] truncate">{notes}</span>
+                      <span className="font-bold text-slate-900 dark:text-white text-right max-w-[150px] md:max-w-[180px] truncate">{notes}</span>
                     </div>
                   )}
                 </div>
@@ -440,13 +440,13 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
               <div className="flex space-x-3">
                 <button
                   onClick={() => setShowConfirmModal(false)}
-                  className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs md:text-sm font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   onClick={handleConfirmSubmit}
-                  className="flex-1 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors"
+                  className="flex-1 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs md:text-sm font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors"
                 >
                   Ya, Simpan
                 </button>

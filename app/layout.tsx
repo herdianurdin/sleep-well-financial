@@ -7,7 +7,13 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Sleep-Well Finance',
-  description: 'Pencatatan keuangan pribadi',
+  description: 'Sistem Pertahanan Kas & Pencatatan Keuangan Pribadi',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Sleep-Well',
+  },
 };
 
 export const viewport: Viewport = {

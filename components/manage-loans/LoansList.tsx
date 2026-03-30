@@ -61,7 +61,7 @@ export function LoansList({ loans, searchQuery, onSearchChange, onDelete, onTogg
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         <AnimatePresence mode="popLayout">
           {filteredActive.map((l) => (
             <motion.div 
@@ -70,34 +70,34 @@ export function LoansList({ loans, searchQuery, onSearchChange, onDelete, onTogg
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group"
+              className="bg-white dark:bg-slate-900 rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group"
             >
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex items-center space-x-4">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg ${getTypeColor(l.type)}`}>
-                    {getIcon(l.type)}
+              <div className="flex items-start justify-between mb-4 md:mb-6 gap-2">
+                <div className="flex items-center space-x-3 md:space-x-4 min-w-0">
+                  <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0 ${getTypeColor(l.type)}`}>
+                    <span className="scale-75 md:scale-100">{getIcon(l.type)}</span>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">{l.name}</h3>
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{l.type}</span>
+                  <div className="min-w-0">
+                    <h3 className="text-base md:text-lg font-bold text-slate-900 dark:text-white truncate">{l.name}</h3>
+                    <span className="text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate block">{l.type}</span>
                   </div>
                 </div>
                 <button 
                   onClick={() => onDelete(l)}
-                  className="p-2 text-slate-200 dark:text-slate-700 hover:text-rose-500 dark:hover:text-rose-400 transition-colors opacity-0 group-hover:opacity-100"
+                  className="p-2 text-slate-200 dark:text-slate-700 hover:text-rose-500 dark:hover:text-rose-400 transition-colors md:opacity-0 md:group-hover:opacity-100 shrink-0"
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500 dark:text-slate-400">Saldo Hutang</span>
-                  <span className="text-lg font-black text-slate-900 dark:text-white">{formatCurrency(l.amount)}</span>
+              <div className="space-y-3 md:space-y-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs md:text-sm text-slate-500 dark:text-slate-400 shrink-0">Saldo Hutang</span>
+                  <span className="text-base md:text-lg font-black text-slate-900 dark:text-white truncate">{formatCurrency(l.amount)}</span>
                 </div>
 
-                <div className="pt-4 border-t border-slate-50 dark:border-slate-800">
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed italic">
+                <div className="pt-3 md:pt-4 border-t border-slate-50 dark:border-slate-800">
+                  <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed italic">
                     Kelola pembayaran dan penambahan saldo melalui menu transaksi.
                   </p>
                 </div>
@@ -112,43 +112,43 @@ export function LoansList({ loans, searchQuery, onSearchChange, onDelete, onTogg
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-slate-50 dark:bg-slate-950 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 opacity-60 group flex flex-col justify-between"
+              className="bg-slate-50 dark:bg-slate-950 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-100 dark:border-slate-800 opacity-60 group flex flex-col justify-between"
             >
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600">
-                    {getIcon(l.type)}
+              <div className="flex items-start justify-between mb-4 md:mb-6 gap-2">
+                <div className="flex items-center space-x-3 md:space-x-4 min-w-0">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 shrink-0">
+                    <span className="scale-75 md:scale-100">{getIcon(l.type)}</span>
                   </div>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <h3 className="text-lg font-bold text-slate-500 dark:text-slate-600 line-through">{l.name}</h3>
-                      <span className="text-[10px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full uppercase tracking-wider">Nonaktif</span>
+                  <div className="min-w-0">
+                    <div className="flex items-center space-x-2 min-w-0">
+                      <h3 className="text-base md:text-lg font-bold text-slate-500 dark:text-slate-600 line-through truncate">{l.name}</h3>
+                      <span className="text-[8px] md:text-[10px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0">Nonaktif</span>
                     </div>
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{l.type}</span>
+                    <span className="text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate block">{l.type}</span>
                   </div>
                 </div>
-                <div className="flex flex-col space-y-2">
+                <div className="flex flex-col space-y-1 md:space-y-2 shrink-0">
                   <button 
                     onClick={() => onToggleStatus(l.id, true)}
-                    className="p-2 text-slate-400 dark:text-slate-600 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                    className="p-1.5 md:p-2 text-slate-400 dark:text-slate-600 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
                     title="Aktifkan Kembali"
                   >
-                    <Check className="w-5 h-5" />
+                    <Check className="w-4 h-4 md:w-5 md:h-5" />
                   </button>
                   <button 
                     onClick={() => onDelete(l)}
-                    className="p-2 text-slate-400 dark:text-slate-600 hover:text-rose-500 dark:hover:text-rose-400 transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-1.5 md:p-2 text-slate-400 dark:text-slate-600 hover:text-rose-500 dark:hover:text-rose-400 transition-colors md:opacity-0 md:group-hover:opacity-100 shrink-0"
                     title="Hapus Permanen"
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-400 dark:text-slate-600">Saldo Hutang</span>
-                  <span className="text-lg font-black text-slate-400 dark:text-slate-600">{formatCurrency(l.amount)}</span>
+              <div className="space-y-3 md:space-y-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs md:text-sm text-slate-400 dark:text-slate-600 shrink-0">Saldo Hutang</span>
+                  <span className="text-base md:text-lg font-black text-slate-400 dark:text-slate-600 truncate">{formatCurrency(l.amount)}</span>
                 </div>
               </div>
             </motion.div>

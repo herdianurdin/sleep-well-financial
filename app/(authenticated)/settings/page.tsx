@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useFinanceStore } from '@/lib/store';
 import { formatCurrency } from '@/lib/utils';
 import { auth } from '@/lib/firebase';
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { firebaseService } from '@/lib/firebase-service';
 import { 
   Lock, 
   LogOut, 
@@ -11,6 +13,8 @@ import {
   Shield, 
   Database, 
   Download, 
+  Upload,
+  FileSpreadsheet,
   Trash2, 
   Eye, 
   EyeOff, 
@@ -21,12 +25,16 @@ import {
   X,
   Save,
   KeyRound,
-  ChevronRight
+  ChevronRight,
+  Calculator,
+  Home,
+  Users,
+  UserCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 
-type ModalType = 'threshold' | 'password' | 'logout' | 'sync' | 'backup' | 'wipe' | null;
+type ModalType = 'threshold' | 'calc-threshold' | 'password' | 'logout' | 'sync' | 'backup' | 'backup-excel' | 'restore-json' | 'restore-excel' | 'wipe' | null;
 
 export default function SettingsPage() {
   const state = useFinanceStore();
@@ -38,8 +46,15 @@ export default function SettingsPage() {
   const [thresholdInput, setThresholdInput] = useState(state.threshold.toLocaleString('id-ID'));
   const [confirmPassword, setConfirmPassword] = useState('');
   const [newPassword, setNewPassword] = useState({ current: '', new: '', confirm: '' });
+  const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false, action: false });
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [importFile, setImportFile] = useState<File | null>(null);
+
+  // Threshold Calculator State
+  const [monthlyLivingCost, setMonthlyLivingCost] = useState(state.monthlyLivingCost.toLocaleString('id-ID'));
+  const [livingCondition, setLivingCondition] = useState<'parents_no_demands' | 'parents_with_demands' | 'alone_no_demands' | 'alone_with_demands'>(state.livingCondition as any || 'parents_no_demands');
 
   // Handlers
   const handleThresholdInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,19 +67,104 @@ export default function SettingsPage() {
     }
   };
 
+  const handleMonthlyCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (value) {
+      const numValue = parseInt(value, 10);
+      setMonthlyLivingCost(numValue.toLocaleString('id-ID'));
+    } else {
+      setMonthlyLivingCost('0');
+    }
+  };
+
+  const calculateThreshold = () => {
+    const cost = parseInt(monthlyLivingCost.replace(/\D/g, ''), 10) || 0;
+    let multiplier = 3;
+    if (livingCondition === 'parents_no_demands') multiplier = 3;
+    else if (livingCondition === 'parents_with_demands') multiplier = 6;
+    else if (livingCondition === 'alone_no_demands') multiplier = 6;
+    else if (livingCondition === 'alone_with_demands') multiplier = 8;
+    
+    return cost * multiplier;
+  };
+
+  const applyCalculatedThreshold = () => {
+    setActiveModal('calc-threshold');
+  };
+
+  const confirmCalculatedThreshold = () => {
+    const result = calculateThreshold();
+    setThresholdInput(result.toLocaleString('id-ID'));
+    state.showToast('Threshold kalkulasi diterapkan ke input', 'success');
+    setActiveModal(null);
+  };
+
   const handlePasswordInputChange = (field: keyof typeof newPassword, value: string) => {
-    setNewPassword(prev => ({ ...prev, [field]: value.toLowerCase() }));
+    setNewPassword(prev => ({ ...prev, [field]: value }));
   };
 
   const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setConfirmPassword(e.target.value.toLowerCase());
+    setConfirmPassword(e.target.value);
   };
 
-  const confirmThresholdSave = () => {
+  const confirmThresholdSave = async () => {
     const numValue = parseInt(thresholdInput.replace(/\D/g, ''), 10);
+    const livingCost = parseInt(monthlyLivingCost.replace(/\D/g, ''), 10) || 0;
+    
     state.setThreshold(numValue);
-    state.showToast('Threshold berhasil diperbarui', 'success');
+    state.setThresholdCalculator(livingCost, livingCondition);
+    
+    if (state.userId) {
+      try {
+        await firebaseService.updateUserSettings(state.userId, {
+          threshold: numValue,
+          monthlyLivingCost: livingCost,
+          livingCondition: livingCondition
+        });
+      } catch (err) {
+        console.error('Failed to sync threshold to cloud:', err);
+      }
+    }
+    
+    state.showToast('Threshold dan Konfigurasi Finansial berhasil diperbarui', 'success');
     setActiveModal(null);
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword.current || !newPassword.new || !newPassword.confirm) {
+      setError('Semua field harus diisi');
+      return;
+    }
+    if (newPassword.new !== newPassword.confirm) {
+      setError('Konfirmasi password baru tidak cocok');
+      return;
+    }
+    if (newPassword.new.length < 6) {
+      setError('Password baru minimal 6 karakter');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    try {
+      const user = auth.currentUser;
+      if (user && user.email) {
+        const credential = EmailAuthProvider.credential(user.email, newPassword.current);
+        await reauthenticateWithCredential(user, credential);
+        await updatePassword(user, newPassword.new);
+        state.showToast('Password berhasil diperbarui', 'success');
+        closeModal();
+      }
+    } catch (err: any) {
+      console.error('Password update error:', err);
+      if (err.code === 'auth/wrong-password') {
+        setError('Password saat ini salah');
+      } else {
+        setError('Gagal memperbarui password. Silakan coba lagi.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -72,43 +172,342 @@ export default function SettingsPage() {
     router.push('/login');
   };
 
-  const handleForceSync = () => {
+  const handleForceSync = async () => {
+    if (!state.userId) return;
     setIsSyncing(true);
-    setActiveModal(null);
-    setTimeout(() => {
+    try {
+      await firebaseService.syncFullState(state.userId, state);
+      const now = new Date();
+      const timeStr = `Hari ini, ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      state.setLastSync(timeStr);
+      state.showToast('Sinkronisasi cloud berhasil', 'success');
+    } catch (err) {
+      console.error('Sync error:', err);
+      state.showToast('Gagal sinkronisasi cloud', 'error');
+    } finally {
       setIsSyncing(false);
-      state.showToast('Sinkronisasi berhasil', 'success');
-    }, 2000);
+      setActiveModal(null);
+    }
   };
 
-  const handleExport = () => {
-    if (confirmPassword !== 'password') { // Placeholder password check
-      setError('Password salah. Gunakan "password" untuk demo.');
+  const handleExport = async () => {
+    if (!confirmPassword) {
+      setError('Password wajib diisi');
       return;
     }
-    const dataStr = JSON.stringify(state, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = `sleepwell-finance-backup-${new Date().toISOString().split('T')[0]}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-    
-    setConfirmPassword('');
+
+    setIsLoading(true);
     setError('');
-    setActiveModal(null);
-    state.showToast('Data berhasil diekspor', 'success');
+    try {
+      const user = auth.currentUser;
+      if (user && user.email) {
+        const credential = EmailAuthProvider.credential(user.email, confirmPassword);
+        await reauthenticateWithCredential(user, credential);
+        
+        const dataStr = JSON.stringify(state, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        const exportFileDefaultName = `sleepwell-finance-backup-${new Date().toISOString().split('T')[0]}.json`;
+        
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+        
+        setConfirmPassword('');
+        setError('');
+        setActiveModal(null);
+        state.showToast('Data berhasil diekspor', 'success');
+      }
+    } catch (err: any) {
+      console.error('Export error:', err);
+      if (err.code === 'auth/wrong-password') {
+        setError('Password salah');
+      } else {
+        setError('Gagal memverifikasi password');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleNuclearOption = () => {
-    if (confirmPassword !== 'password') { // Placeholder password check
-      setError('Password salah. Gunakan "password" untuk demo.');
+  const handleNuclearOption = async () => {
+    if (!confirmPassword) {
+      setError('Password wajib diisi');
       return;
     }
-    state.resetData();
-    localStorage.clear();
-    window.location.href = '/login';
+
+    setIsLoading(true);
+    setError('');
+    try {
+      const user = auth.currentUser;
+      if (user && user.email) {
+        const credential = EmailAuthProvider.credential(user.email, confirmPassword);
+        await reauthenticateWithCredential(user, credential);
+        
+        if (state.userId) {
+          await firebaseService.wipeAllData(state.userId);
+        }
+        
+        state.resetData();
+        localStorage.clear();
+        state.logout();
+        router.push('/login');
+      }
+    } catch (err: any) {
+      console.error('Wipe error:', err);
+      if (err.code === 'auth/wrong-password') {
+        setError('Password salah');
+      } else {
+        setError('Gagal memverifikasi password');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    if (!confirmPassword) {
+      setError('Password wajib diisi');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    try {
+      const user = auth.currentUser;
+      if (user && user.email) {
+        const credential = EmailAuthProvider.credential(user.email, confirmPassword);
+        await reauthenticateWithCredential(user, credential);
+        
+        const XLSX = await import('xlsx');
+        // Prepare data for Excel
+        const wb = XLSX.utils.book_new();
+        
+        // Settings Sheet
+        const settingsData = [{
+          Threshold: state.threshold,
+          MonthlyLivingCost: state.monthlyLivingCost,
+          LivingCondition: state.livingCondition,
+          PrivacyMode: state.privacyMode,
+          SessionTimeout: state.sessionTimeout
+        }];
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(settingsData), "Settings");
+        
+        // Cash Positions
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.cashPositions), "CashPositions");
+        
+        // Assets
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.assets), "Assets");
+        
+        // Receivables
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.receivables), "Receivables");
+        
+        // Loans
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.loans), "Loans");
+        
+        // Transactions
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.transactions), "Transactions");
+        
+        // Export
+        XLSX.writeFile(wb, `sleepwell-finance-backup-${new Date().toISOString().split('T')[0]}.xlsx`);
+        
+        setConfirmPassword('');
+        setError('');
+        setActiveModal(null);
+        state.showToast('Data berhasil diekspor ke Excel', 'success');
+      }
+    } catch (err: any) {
+      console.error('Excel export error:', err);
+      if (err.code === 'auth/wrong-password') {
+        setError('Password salah');
+      } else {
+        setError('Gagal memverifikasi password');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRestoreJSON = async () => {
+    if (!confirmPassword) {
+      setError('Password wajib diisi');
+      return;
+    }
+    if (!importFile) {
+      setError('Pilih file JSON terlebih dahulu');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    try {
+      const user = auth.currentUser;
+      if (user && user.email) {
+        const credential = EmailAuthProvider.credential(user.email, confirmPassword);
+        await reauthenticateWithCredential(user, credential);
+        
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const content = e.target?.result as string;
+            const data = JSON.parse(content);
+            
+            // Basic validation
+            if (!data.cashPositions || !data.transactions) {
+              throw new Error('Format file tidak valid');
+            }
+            
+            // Update store
+            state.setUserData(data);
+            
+            // Sync to Firebase if needed
+            const latestState = useFinanceStore.getState();
+            if (latestState.userId) {
+              await firebaseService.wipeAllData(latestState.userId);
+              await firebaseService.syncFullState(latestState.userId, latestState);
+            }
+            
+            setConfirmPassword('');
+            setImportFile(null);
+            setError('');
+            setActiveModal(null);
+            state.showToast('Data berhasil di-restore dari JSON', 'success');
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          } catch (err) {
+            setError('Gagal membaca file JSON: ' + (err as Error).message);
+          }
+        };
+        reader.readAsText(importFile);
+      }
+    } catch (err: any) {
+      console.error('JSON restore error:', err);
+      if (err.code === 'auth/wrong-password') {
+        setError('Password salah');
+      } else {
+        setError('Gagal memverifikasi password');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRestoreExcel = async () => {
+    if (!confirmPassword) {
+      setError('Password wajib diisi');
+      return;
+    }
+    if (!importFile) {
+      setError('Pilih file Excel terlebih dahulu');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    try {
+      const user = auth.currentUser;
+      if (user && user.email) {
+        const credential = EmailAuthProvider.credential(user.email, confirmPassword);
+        await reauthenticateWithCredential(user, credential);
+        
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const XLSX = await import('xlsx');
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            const restoredData: any = {};
+            
+            // Helper to get sheet data
+            const getSheetData = (name: string) => {
+              const sheet = workbook.Sheets[name];
+              return sheet ? XLSX.utils.sheet_to_json(sheet) : [];
+            };
+            
+            const settings = getSheetData("Settings")[0] as any;
+            if (settings) {
+              restoredData.settings = {
+                threshold: settings.Threshold,
+                monthlyLivingCost: settings.MonthlyLivingCost,
+                livingCondition: settings.LivingCondition,
+                privacyMode: settings.PrivacyMode === true || settings.PrivacyMode === "true",
+                sessionTimeout: settings.SessionTimeout
+              };
+            }
+            
+            restoredData.cashPositions = getSheetData("CashPositions");
+            restoredData.assets = getSheetData("Assets");
+            restoredData.receivables = getSheetData("Receivables");
+            restoredData.loans = getSheetData("Loans");
+            restoredData.transactions = getSheetData("Transactions");
+            
+            // Basic validation
+            if (restoredData.cashPositions.length === 0 && restoredData.transactions.length === 0) {
+              throw new Error('File Excel kosong atau format tidak sesuai');
+            }
+            
+            // Update store
+            state.setUserData(restoredData);
+            
+            // Sync to Firebase if needed
+            const latestState = useFinanceStore.getState();
+            if (latestState.userId) {
+              await firebaseService.wipeAllData(latestState.userId);
+              await firebaseService.syncFullState(latestState.userId, latestState);
+            }
+            
+            setConfirmPassword('');
+            setImportFile(null);
+            setError('');
+            setActiveModal(null);
+            state.showToast('Data berhasil di-restore dari Excel', 'success');
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          } catch (err) {
+            setError('Gagal membaca file Excel: ' + (err as Error).message);
+          }
+        };
+        reader.readAsArrayBuffer(importFile);
+      }
+    } catch (err: any) {
+      console.error('Excel restore error:', err);
+      if (err.code === 'auth/wrong-password') {
+        setError('Password salah');
+      } else {
+        setError('Gagal memverifikasi password');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTogglePrivacy = async () => {
+    state.togglePrivacyMode();
+    if (state.userId) {
+      try {
+        await firebaseService.updateUserSettings(state.userId, {
+          privacyMode: !state.privacyMode
+        });
+      } catch (err) {
+        console.error('Failed to sync privacy mode:', err);
+      }
+    }
+  };
+
+  const handleSetTimeout = async (val: string) => {
+    state.setSessionTimeout(val);
+    if (state.userId) {
+      try {
+        await firebaseService.updateUserSettings(state.userId, {
+          sessionTimeout: val
+        });
+      } catch (err) {
+        console.error('Failed to sync session timeout:', err);
+      }
+    }
   };
 
   const closeModal = () => {
@@ -116,6 +515,8 @@ export default function SettingsPage() {
     setConfirmPassword('');
     setError('');
     setNewPassword({ current: '', new: '', confirm: '' });
+    setShowPasswords({ current: false, new: false, confirm: false, action: false });
+    setImportFile(null);
   };
 
   if (state.isLoading) {
@@ -208,41 +609,127 @@ export default function SettingsPage() {
           <h2 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">Konfigurasi Finansial</h2>
         </div>
         
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-6 border border-slate-100 dark:border-slate-800 shadow-sm transition-colors space-y-4 sm:space-y-6">
-          <div className="flex flex-col md:flex-row md:items-stretch gap-3 sm:gap-4">
-            <div className="flex-1 space-y-1.5 sm:space-y-2">
-              <label className="block text-[8px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                Threshold (Uang Dingin)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 sm:left-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-bold text-sm sm:text-lg">Rp</span>
-                <input
-                  type="text"
-                  value={thresholdInput}
-                  onChange={handleThresholdInputChange}
-                  className="w-full pl-9 sm:pl-12 pr-4 py-2 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-slate-700 rounded-xl text-sm sm:text-lg font-bold text-slate-900 dark:text-white transition-all outline-none"
-                  placeholder="0"
-                />
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-100 dark:border-slate-800 shadow-sm transition-colors space-y-6">
+          {/* Main Threshold Input */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+              <div className="flex-1 space-y-2">
+                <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  Threshold (Uang Dingin)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-bold text-lg">Rp</span>
+                  <input
+                    type="text"
+                    value={thresholdInput}
+                    onChange={handleThresholdInputChange}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-slate-700 rounded-xl text-lg font-bold text-slate-900 dark:text-white transition-all outline-none"
+                    placeholder="0"
+                  />
+                </div>
               </div>
-            </div>
-            <div className="flex flex-col justify-end">
               <button 
                 onClick={() => setActiveModal('threshold')}
-                className="px-6 py-2 sm:py-3 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold rounded-xl transition-all flex items-center justify-center space-x-2 shadow-lg shadow-slate-900/10 dark:shadow-none h-[42px] sm:h-[52px]"
+                className="w-full sm:w-auto px-8 py-3.5 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold rounded-xl transition-all flex items-center justify-center space-x-2 shadow-lg shadow-slate-900/10 dark:shadow-none"
               >
-                <Save className="w-3.5 h-3.5" />
-                <span className="text-xs sm:text-sm">Simpan</span>
+                <Save className="w-4 h-4" />
+                <span>Simpan Konfigurasi</span>
+              </button>
+            </div>
+            
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 flex items-start space-x-3">
+              <CircleAlert className="w-5 h-5 text-blue-500 dark:text-blue-400 mt-0.5 shrink-0" />
+              <p className="text-xs text-blue-700 dark:text-blue-300 font-medium leading-relaxed">
+                Batas aman saldo yang harus dijaga di Kas Utama. Jika saldo turun di bawah angka ini, sistem akan memberikan peringatan visual di Dashboard.
+              </p>
+            </div>
+          </div>
+
+          <div className="h-px bg-slate-100 dark:bg-slate-800 w-full" />
+
+          {/* Calculator Section */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <Calculator className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 tracking-tight">Kalkulator Threshold</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              <div className="space-y-2">
+                <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  Biaya Hidup Bulanan
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-bold text-base">Rp</span>
+                  <input
+                    type="text"
+                    value={monthlyLivingCost}
+                    onChange={handleMonthlyCostChange}
+                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-slate-700 rounded-xl text-base font-bold text-slate-900 dark:text-white transition-all outline-none"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                    Kondisi & Tanggungan
+                  </label>
+                  <div className="group relative">
+                    <CircleAlert className="w-3 h-3 text-slate-400 cursor-help" />
+                    <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-slate-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl border border-slate-800">
+                      <p className="font-bold mb-1 border-b border-slate-800 pb-1">Panduan Kondisi:</p>
+                      <ul className="space-y-1 list-disc pl-3 text-slate-300">
+                        <li><span className="text-white font-bold">3 Bln:</span> Tinggal dengan ortu, tanpa tanggungan.</li>
+                        <li><span className="text-white font-bold">6 Bln:</span> Tinggal dengan ortu + bantu biaya keluarga/adik.</li>
+                        <li><span className="text-white font-bold">6 Bln:</span> Tinggal sendiri (kost/kontrak), tanpa tanggungan.</li>
+                        <li><span className="text-white font-bold">8 Bln:</span> Tinggal sendiri + bantu biaya keluarga.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div className="relative">
+                  <select 
+                    value={livingCondition}
+                    onChange={(e) => setLivingCondition(e.target.value as any)}
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-slate-700 rounded-xl text-xs sm:text-sm font-bold text-slate-900 dark:text-white transition-all outline-none appearance-none cursor-pointer pr-10"
+                  >
+                    <option value="parents_no_demands">Tinggal dengan Orang Tua (Tanpa Tuntutan) - 3 Bln</option>
+                    <option value="parents_with_demands">Tinggal dengan Orang Tua (Banyak Tuntutan) - 6 Bln</option>
+                    <option value="alone_no_demands">Tinggal Sendiri (Tanpa Tuntutan) - 6 Bln</option>
+                    <option value="alone_with_demands">Tinggal Sendiri (Dengan Tuntutan) - 8 Bln</option>
+                  </select>
+                  <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
+                </div>
+                <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium px-1">
+                  *Pilih kondisi yang paling sesuai untuk menentukan multiplier dana darurat (3x, 6x, atau 8x biaya hidup).
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-center sm:text-left">
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Estimasi Kebutuhan</p>
+                <p className="text-xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
+                  Rp {calculateThreshold().toLocaleString('id-ID')}
+                </p>
+              </div>
+              <button 
+                onClick={applyCalculatedThreshold}
+                disabled={monthlyLivingCost === '0'}
+                className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all flex items-center justify-center space-x-2 shadow-lg shadow-blue-500/20 disabled:opacity-50"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span className="text-xs">Gunakan Hasil Kalkulasi</span>
               </button>
             </div>
           </div>
-          <div className="p-2.5 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 flex items-start space-x-2.5 sm:space-x-3">
-            <CircleAlert className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-blue-500 dark:text-blue-400 mt-0.5 shrink-0" />
-            <p className="text-[9px] sm:text-xs text-blue-700 dark:text-blue-300 font-medium leading-relaxed">
-              Batas aman saldo yang harus dijaga di Kas Utama. Jika saldo turun di bawah angka ini, sistem akan memberikan peringatan visual di Dashboard.
-            </p>
-          </div>
         </div>
       </section>
+
 
       {/* 3. Preferensi & Privasi */}
       <section className="space-y-4">
@@ -265,7 +752,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <button 
-              onClick={() => state.togglePrivacyMode()}
+              onClick={handleTogglePrivacy}
               className={`w-9 h-5.5 sm:w-10 sm:h-6 rounded-full transition-all relative shrink-0 ${state.privacyMode ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}
             >
               <motion.div 
@@ -287,7 +774,7 @@ export default function SettingsPage() {
             </div>
             <select 
               value={state.sessionTimeout}
-              onChange={(e) => state.setSessionTimeout(e.target.value)}
+              onChange={(e) => handleSetTimeout(e.target.value)}
               className="bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-slate-200 dark:focus:border-slate-700 text-[10px] sm:text-sm font-bold text-slate-700 dark:text-slate-300 rounded-xl px-2 sm:px-4 py-1 sm:py-2 outline-none cursor-pointer shrink-0 ml-2"
             >
               <option value="30 Menit">30 Menit</option>
@@ -334,11 +821,15 @@ export default function SettingsPage() {
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <div className="p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
               <p className="text-[8px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5 sm:mb-1">Status Server</p>
-              <p className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300">Optimal (12ms)</p>
+              <p className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300">
+                {isSyncing ? 'Syncing...' : 'Optimal (12ms)'}
+              </p>
             </div>
             <div className="p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
               <p className="text-[8px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5 sm:mb-1">Last Updated</p>
-              <p className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300">Hari ini, 17:21</p>
+              <p className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300">
+                {state.lastSync || 'Belum pernah'}
+              </p>
             </div>
           </div>
         </div>
@@ -353,7 +844,7 @@ export default function SettingsPage() {
           <h2 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">Manajemen Data</h2>
         </div>
         
-        <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-5 border border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4">
+        <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-5 border border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
           <button 
             onClick={() => setActiveModal('backup')}
             className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl transition-all group"
@@ -369,10 +860,58 @@ export default function SettingsPage() {
             </div>
             <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-300 dark:text-slate-600" />
           </button>
+
+          <button 
+            onClick={() => setActiveModal('backup-excel')}
+            className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl transition-all group"
+          >
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="p-1.5 sm:p-2.5 bg-white dark:bg-slate-900 rounded-lg shadow-sm group-hover:text-emerald-500 transition-colors">
+                <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600 dark:text-slate-400" />
+              </div>
+              <div className="text-left">
+                <p className="text-[11px] sm:text-sm font-bold text-slate-800 dark:text-slate-200">Export to Excel</p>
+                <p className="text-[8px] sm:text-[10px] font-medium text-slate-400 dark:text-slate-500">Backup data ke file Excel</p>
+              </div>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-300 dark:text-slate-600" />
+          </button>
+
+          <button 
+            onClick={() => setActiveModal('restore-json')}
+            className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl transition-all group"
+          >
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="p-1.5 sm:p-2.5 bg-white dark:bg-slate-900 rounded-lg shadow-sm group-hover:text-purple-500 transition-colors">
+                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600 dark:text-slate-400" />
+              </div>
+              <div className="text-left">
+                <p className="text-[11px] sm:text-sm font-bold text-slate-800 dark:text-slate-200">Restore JSON</p>
+                <p className="text-[8px] sm:text-[10px] font-medium text-slate-400 dark:text-slate-500">Pulihkan data dari file JSON</p>
+              </div>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-300 dark:text-slate-600" />
+          </button>
+
+          <button 
+            onClick={() => setActiveModal('restore-excel')}
+            className="flex items-center justify-between p-3 sm:p-4 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl transition-all group"
+          >
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="p-1.5 sm:p-2.5 bg-white dark:bg-slate-900 rounded-lg shadow-sm group-hover:text-emerald-600 transition-colors">
+                <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600 dark:text-slate-400" />
+              </div>
+              <div className="text-left">
+                <p className="text-[11px] sm:text-sm font-bold text-slate-800 dark:text-slate-200">Restore Excel</p>
+                <p className="text-[8px] sm:text-[10px] font-medium text-slate-400 dark:text-slate-500">Pulihkan data dari file Excel</p>
+              </div>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-300 dark:text-slate-600" />
+          </button>
           
           <button 
             onClick={() => setActiveModal('wipe')}
-            className="flex items-center justify-between p-3 sm:p-4 bg-rose-50/50 dark:bg-rose-900/10 hover:bg-rose-50 dark:hover:bg-rose-900/20 border border-rose-100/50 dark:border-rose-900/30 rounded-xl transition-all group"
+            className="flex items-center justify-between p-3 sm:p-4 bg-rose-50/50 dark:bg-rose-900/10 hover:bg-rose-50 dark:hover:bg-rose-900/20 border border-rose-100/50 dark:border-rose-900/30 rounded-xl transition-all group lg:col-span-2"
           >
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="p-1.5 sm:p-2.5 bg-white dark:bg-slate-900 rounded-lg shadow-sm group-hover:text-rose-600 transition-colors">
@@ -405,36 +944,79 @@ export default function SettingsPage() {
           </Modal>
         )}
 
+        {activeModal === 'calc-threshold' && (
+          <Modal 
+            title="Gunakan Hasil Kalkulasi?"
+            description="Angka hasil kalkulasi akan menggantikan input threshold saat ini. Anda tetap harus menekan tombol 'Simpan Konfigurasi' untuk menyimpan secara permanen."
+            onConfirm={confirmCalculatedThreshold}
+            onClose={closeModal}
+            confirmText="Gunakan"
+          >
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-800 text-center">
+              <p className="text-[9px] sm:text-[10px] font-bold text-blue-400 dark:text-blue-500 uppercase tracking-widest mb-2">Hasil Kalkulasi</p>
+              <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 tracking-tight">Rp {calculateThreshold().toLocaleString('id-ID')}</p>
+            </div>
+          </Modal>
+        )}
+
         {activeModal === 'password' && (
           <Modal 
             title="Ubah Password"
             description="Masukkan password lama dan baru Anda untuk melanjutkan."
-            onConfirm={() => setActiveModal(null)}
+            onConfirm={handleUpdatePassword}
             onClose={closeModal}
-            confirmText="Update Password"
+            confirmText={isLoading ? "Memproses..." : "Update Password"}
           >
             <div className="space-y-3 sm:space-y-4">
-                <input 
-                  type="password" 
-                  value={newPassword.current}
-                  onChange={(e) => handlePasswordInputChange('current', e.target.value)}
-                  placeholder="Password Saat Ini"
-                  className="w-full px-4 sm:px-5 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-purple-500 rounded-xl outline-none font-bold text-slate-900 dark:text-white text-sm"
-                />
-                <input 
-                  type="password" 
-                  value={newPassword.new}
-                  onChange={(e) => handlePasswordInputChange('new', e.target.value)}
-                  placeholder="Password Baru"
-                  className="w-full px-4 sm:px-5 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-purple-500 rounded-xl outline-none font-bold text-slate-900 dark:text-white text-sm"
-                />
-                <input 
-                  type="password" 
-                  value={newPassword.confirm}
-                  onChange={(e) => handlePasswordInputChange('confirm', e.target.value)}
-                  placeholder="Konfirmasi Password Baru"
-                  className="w-full px-4 sm:px-5 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-purple-500 rounded-xl outline-none font-bold text-slate-900 dark:text-white text-sm"
-                />
+                <div className="relative">
+                  <input 
+                    type={showPasswords.current ? "text" : "password"} 
+                    value={newPassword.current}
+                    onChange={(e) => handlePasswordInputChange('current', e.target.value)}
+                    placeholder="Password Saat Ini"
+                    className="w-full px-4 sm:px-5 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-purple-500 rounded-xl outline-none font-bold text-slate-900 dark:text-white text-sm pr-12"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                  >
+                    {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <div className="relative">
+                  <input 
+                    type={showPasswords.new ? "text" : "password"} 
+                    value={newPassword.new}
+                    onChange={(e) => handlePasswordInputChange('new', e.target.value)}
+                    placeholder="Password Baru"
+                    className="w-full px-4 sm:px-5 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-purple-500 rounded-xl outline-none font-bold text-slate-900 dark:text-white text-sm pr-12"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                  >
+                    {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <div className="relative">
+                  <input 
+                    type={showPasswords.confirm ? "text" : "password"} 
+                    value={newPassword.confirm}
+                    onChange={(e) => handlePasswordInputChange('confirm', e.target.value)}
+                    placeholder="Konfirmasi Password Baru"
+                    className="w-full px-4 sm:px-5 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-purple-500 rounded-xl outline-none font-bold text-slate-900 dark:text-white text-sm pr-12"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                  >
+                    {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {error && <p className="text-[10px] text-rose-500 font-bold px-2">{error}</p>}
             </div>
           </Modal>
         )}
@@ -466,18 +1048,25 @@ export default function SettingsPage() {
             description="Masukkan password Anda untuk mengunduh file backup JSON."
             onConfirm={handleExport}
             onClose={closeModal}
-            confirmText="Download JSON"
+            confirmText={isLoading ? "Memproses..." : "Download JSON"}
           >
             <div className="space-y-4">
               <div className="relative">
                 <KeyRound className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400 dark:text-slate-500" />
                 <input 
-                  type="password" 
+                  type={showPasswords.action ? "text" : "password"} 
                   value={confirmPassword}
                   onChange={handleConfirmPasswordChange}
                   placeholder="Masukkan Password"
-                  className="w-full pl-10 sm:pl-12 pr-4 sm:pr-6 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 rounded-xl outline-none font-bold text-slate-900 dark:text-white text-sm"
+                  className="w-full pl-10 sm:pl-12 pr-12 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 rounded-xl outline-none font-bold text-slate-900 dark:text-white text-sm"
                 />
+                <button 
+                  type="button"
+                  onClick={() => setShowPasswords(prev => ({ ...prev, action: !prev.action }))}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                >
+                  {showPasswords.action ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
               {error && <p className="text-[9px] sm:text-[10px] text-rose-500 font-bold px-2">{error}</p>}
             </div>
@@ -490,7 +1079,7 @@ export default function SettingsPage() {
             description="Seluruh data lokal dan cache akan dihapus bersih. Aksi ini tidak dapat dibatalkan."
             onConfirm={handleNuclearOption}
             onClose={closeModal}
-            confirmText="Hapus Permanen"
+            confirmText={isLoading ? "Memproses..." : "Hapus Permanen"}
             confirmVariant="danger"
           >
             <div className="space-y-4">
@@ -502,12 +1091,149 @@ export default function SettingsPage() {
               <div className="relative">
                 <KeyRound className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400 dark:text-slate-500" />
                 <input 
-                  type="password" 
+                  type={showPasswords.action ? "text" : "password"} 
                   value={confirmPassword}
                   onChange={handleConfirmPasswordChange}
                   placeholder="Konfirmasi Password"
-                  className="w-full pl-10 sm:pl-12 pr-4 sm:pr-6 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-rose-500 rounded-xl outline-none font-bold text-slate-900 dark:text-white text-sm"
+                  className="w-full pl-10 sm:pl-12 pr-12 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-rose-500 rounded-xl outline-none font-bold text-slate-900 dark:text-white text-sm"
                 />
+                <button 
+                  type="button"
+                  onClick={() => setShowPasswords(prev => ({ ...prev, action: !prev.action }))}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                >
+                  {showPasswords.action ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {error && <p className="text-[9px] sm:text-[10px] text-rose-500 font-bold px-2">{error}</p>}
+            </div>
+          </Modal>
+        )}
+
+        {activeModal === 'backup-excel' && (
+          <Modal 
+            title="Export ke Excel"
+            description="Seluruh data aplikasi akan diekspor ke dalam satu file Excel (.xlsx)."
+            onConfirm={handleExportExcel}
+            onClose={closeModal}
+            confirmText={isLoading ? "Mengekspor..." : "Export Sekarang"}
+          >
+            <div className="space-y-4">
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800">
+                <p className="text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-bold leading-relaxed">
+                  Data yang diekspor meliputi: Posisi Kas, Aset, Piutang, Transaksi, dan Pengaturan.
+                </p>
+              </div>
+              <div className="relative">
+                <KeyRound className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400 dark:text-slate-500" />
+                <input 
+                  type={showPasswords.action ? "text" : "password"} 
+                  value={confirmPassword}
+                  onChange={handleConfirmPasswordChange}
+                  placeholder="Konfirmasi Password"
+                  className="w-full pl-10 sm:pl-12 pr-12 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-slate-900 dark:focus:border-white rounded-xl outline-none font-bold text-slate-900 dark:text-white text-sm"
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPasswords(prev => ({ ...prev, action: !prev.action }))}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                >
+                  {showPasswords.action ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {error && <p className="text-[9px] sm:text-[10px] text-rose-500 font-bold px-2">{error}</p>}
+            </div>
+          </Modal>
+        )}
+
+        {activeModal === 'restore-json' && (
+          <Modal 
+            title="Restore dari JSON"
+            description="Pulihkan data aplikasi dari file backup JSON sebelumnya."
+            onConfirm={handleRestoreJSON}
+            onClose={closeModal}
+            confirmText={isLoading ? "Memulihkan..." : "Restore Sekarang"}
+          >
+            <div className="space-y-4">
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800">
+                <p className="text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-400 font-bold leading-relaxed">
+                  Peringatan: Data saat ini akan ditimpa sepenuhnya oleh data dari file backup.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Pilih File JSON</label>
+                <input 
+                  type="file" 
+                  accept=".json"
+                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400"
+                />
+              </div>
+
+              <div className="relative">
+                <KeyRound className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400 dark:text-slate-500" />
+                <input 
+                  type={showPasswords.action ? "text" : "password"} 
+                  value={confirmPassword}
+                  onChange={handleConfirmPasswordChange}
+                  placeholder="Konfirmasi Password"
+                  className="w-full pl-10 sm:pl-12 pr-12 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-slate-900 dark:focus:border-white rounded-xl outline-none font-bold text-slate-900 dark:text-white text-sm"
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPasswords(prev => ({ ...prev, action: !prev.action }))}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                >
+                  {showPasswords.action ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {error && <p className="text-[9px] sm:text-[10px] text-rose-500 font-bold px-2">{error}</p>}
+            </div>
+          </Modal>
+        )}
+
+        {activeModal === 'restore-excel' && (
+          <Modal 
+            title="Restore dari Excel"
+            description="Pulihkan data aplikasi dari file backup Excel (.xlsx)."
+            onConfirm={handleRestoreExcel}
+            onClose={closeModal}
+            confirmText={isLoading ? "Memulihkan..." : "Restore Sekarang"}
+          >
+            <div className="space-y-4">
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800">
+                <p className="text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-400 font-bold leading-relaxed">
+                  Peringatan: Data saat ini akan ditimpa sepenuhnya oleh data dari file backup Excel.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Pilih File Excel (.xlsx)</label>
+                <input 
+                  type="file" 
+                  accept=".xlsx"
+                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400"
+                />
+              </div>
+
+              <div className="relative">
+                <KeyRound className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400 dark:text-slate-500" />
+                <input 
+                  type={showPasswords.action ? "text" : "password"} 
+                  value={confirmPassword}
+                  onChange={handleConfirmPasswordChange}
+                  placeholder="Konfirmasi Password"
+                  className="w-full pl-10 sm:pl-12 pr-12 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-slate-900 dark:focus:border-white rounded-xl outline-none font-bold text-slate-900 dark:text-white text-sm"
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPasswords(prev => ({ ...prev, action: !prev.action }))}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                >
+                  {showPasswords.action ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
               {error && <p className="text-[9px] sm:text-[10px] text-rose-500 font-bold px-2">{error}</p>}
             </div>

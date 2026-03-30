@@ -1,4 +1,14 @@
 import type {NextConfig} from 'next';
+import withPWAInit from '@ducanh2912/next-pwa';
+
+const isGithubActions = process.env.GITHUB_ACTIONS || false;
+const repo = 'sleep-well-financial';
+const basePath = isGithubActions ? `/${repo}` : '';
+
+const withPWA = withPWAInit({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+});
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -11,6 +21,7 @@ const nextConfig: NextConfig = {
   },
   // Allow access to remote image placeholder.
   images: {
+    unoptimized: !!isGithubActions, // Required for static export
     remotePatterns: [
       {
         protocol: 'https',
@@ -20,7 +31,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  output: 'standalone',
+  output: isGithubActions ? 'export' : 'standalone',
+  basePath: basePath,
   transpilePackages: ['motion'],
   webpack: (config, {dev}) => {
     // HMR is disabled in AI Studio via DISABLE_HMR env var.
@@ -34,4 +46,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

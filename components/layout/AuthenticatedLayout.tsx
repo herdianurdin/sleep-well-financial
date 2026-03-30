@@ -43,6 +43,7 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
   const isThresholdBreached = mainWallet ? mainWallet.balance < threshold : false;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
   }, []);
 
@@ -61,21 +62,8 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
   // Sync with Firebase Realtime Database
   useEffect(() => {
     if (isLoggedIn && userId) {
-      let debounceTimeout: any = null;
-      let settleTimeout: any = null;
-
       const handleData = (setter: any) => (data: any) => {
-        const state = useFinanceStore.getState();
-        // Skip if we are currently pushing data to Firebase to prevent race conditions
-        if (state.isSyncingToFirebase) return;
-        
-        state.setIsSyncingFromFirebase(true);
         setter(data);
-        
-        if (settleTimeout) clearTimeout(settleTimeout);
-        settleTimeout = setTimeout(() => {
-          useFinanceStore.getState().setIsSyncingFromFirebase(false);
-        }, 500); // Increased settle time
       };
 
       const unsubUser = firebaseService.listenToUserData(userId, handleData(setUserData));
@@ -85,39 +73,6 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
       const unsubLoans = firebaseService.listenToLoans(userId, handleData(setLoans));
       const unsubPeriods = firebaseService.listenToAvailablePeriods(userId, handleData(setAvailablePeriods));
 
-      // Subscribe to local changes to push to Firebase
-      const unsubStore = useFinanceStore.subscribe((state, prevState) => {
-        if (state.isLoggedIn && state.userId && !state.isSyncingFromFirebase && !state.isSyncingToFirebase) {
-          // Check if relevant data changed
-          const hasChanged = 
-            state.cashPositions !== prevState.cashPositions ||
-            state.assets !== prevState.assets ||
-            state.receivables !== prevState.receivables ||
-            state.loans !== prevState.loans ||
-            state.threshold !== prevState.threshold ||
-            state.mainWalletId !== prevState.mainWalletId ||
-            state.privacyMode !== prevState.privacyMode ||
-            state.sessionTimeout !== prevState.sessionTimeout ||
-            state.receivableCategories !== prevState.receivableCategories;
-
-          if (hasChanged) {
-            if (debounceTimeout) clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(async () => {
-              const currentState = useFinanceStore.getState();
-              currentState.setIsSyncingToFirebase(true);
-              try {
-                await firebaseService.syncFullState(currentState.userId!, currentState);
-              } finally {
-                // Keep the lock for a bit longer to allow Firebase listeners to receive the update
-                setTimeout(() => {
-                  useFinanceStore.getState().setIsSyncingToFirebase(false);
-                }, 1000);
-              }
-            }, 500); // Debounce sync by 500ms
-          }
-        }
-      });
-
       return () => {
         unsubUser();
         unsubCash();
@@ -125,9 +80,6 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
         unsubReceivables();
         unsubLoans();
         unsubPeriods();
-        unsubStore();
-        if (debounceTimeout) clearTimeout(debounceTimeout);
-        if (settleTimeout) clearTimeout(settleTimeout);
       };
     }
   }, [isLoggedIn, userId, setUserData, setCashPositions, setAssets, setReceivables, setLoans, setAvailablePeriods]);
@@ -135,18 +87,8 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
   // Sync Transactions (Depends on currentYear and currentMonth)
   useEffect(() => {
     if (isLoggedIn && userId) {
-      let settleTimeout: any = null;
       const handleData = (setter: any) => (data: any) => {
-        const state = useFinanceStore.getState();
-        if (state.isSyncingToFirebase) return;
-
-        state.setIsSyncingFromFirebase(true);
         setter(data);
-        
-        if (settleTimeout) clearTimeout(settleTimeout);
-        settleTimeout = setTimeout(() => {
-          useFinanceStore.getState().setIsSyncingFromFirebase(false);
-        }, 500);
       };
 
       const yearStr = currentYear.toString();
@@ -155,7 +97,6 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
 
       return () => {
         unsubTransactions();
-        if (settleTimeout) clearTimeout(settleTimeout);
       };
     }
   }, [isLoggedIn, userId, currentYear, currentMonth, setTransactions]);
@@ -171,6 +112,7 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
 
   // Close mobile menu on route change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMobileMenuOpen(false);
   }, [pathname]);
 

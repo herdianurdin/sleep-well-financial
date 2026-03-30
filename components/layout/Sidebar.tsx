@@ -52,8 +52,8 @@ export default function Sidebar() {
   return (
     <div className={`flex flex-col ${isCollapsed ? 'w-20' : 'w-64'} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-screen sticky top-0 shrink-0 transition-all duration-300 z-50`}>
       {/* Header */}
-      <div className={`p-6 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} space-x-3`}>
-        <div className="flex items-center space-x-3 overflow-hidden">
+      <div className={`flex items-center ${isCollapsed ? 'p-4 justify-center' : 'p-6 justify-between'}`}>
+        <div className={`flex items-center ${isCollapsed ? '' : 'space-x-3 overflow-hidden'}`}>
           <div className="w-10 h-10 bg-slate-900 dark:bg-slate-800 rounded-xl flex items-center justify-center shadow-md shrink-0">
             <Wallet className="w-5 h-5 text-white" />
           </div>

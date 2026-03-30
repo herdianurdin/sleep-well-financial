@@ -101,15 +101,15 @@ export default function ManageReceivablesPage() {
   }
 
   return (
-    <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto pb-32">
+    <div className="p-4 md:p-10 space-y-6 md:space-y-8 max-w-7xl mx-auto pb-32">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Kelola Piutang</h1>
-          <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 mt-1">Pantau pagu dan daftar peminjam berdasarkan kategori</p>
+        <div className="px-1 md:px-0">
+          <h1 className="text-xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Kelola Piutang</h1>
+          <p className="text-xs md:text-base text-slate-500 dark:text-slate-400 mt-1">Pantau pagu dan daftar peminjam berdasarkan kategori</p>
         </div>
         <button 
           onClick={() => setIsAdding(true)}
-          className="flex items-center justify-center space-x-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-lg shadow-slate-200 dark:shadow-none font-medium"
+          className="w-full md:w-auto flex items-center justify-center space-x-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-lg shadow-slate-200 dark:shadow-none font-medium text-sm sm:text-base"
         >
           <Plus className="w-5 h-5" />
           <span>Tambah Peminjam</span>

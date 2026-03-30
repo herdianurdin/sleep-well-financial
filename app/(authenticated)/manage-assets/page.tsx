@@ -119,20 +119,20 @@ export default function ManageAssetsPage() {
   }
 
   return (
-    <div className="p-5 md:p-8 space-y-6 max-w-7xl mx-auto pb-32">
-      <header className="mb-6">
-        <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Kelola Investasi</h1>
-        <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Atur daftar instrumen investasi (Aset Beku) Anda</p>
+    <div className="p-4 md:p-10 space-y-6 md:space-y-8 max-w-7xl mx-auto pb-32">
+      <header className="mb-4 md:mb-8">
+        <h1 className="text-xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Kelola Investasi</h1>
+        <p className="text-[10px] md:text-sm text-slate-500 dark:text-slate-400 mt-1">Atur daftar instrumen investasi (Aset Beku) Anda</p>
       </header>
 
       {errorMsg && (
-        <div className="bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 px-4 py-3 rounded-xl text-sm font-medium flex items-center space-x-2">
-          <CircleAlert className="w-4 h-4" />
+        <div className="bg-rose-50 dark:bg-rose-900/30 border border-rose-100 dark:border-rose-900 text-rose-600 dark:text-rose-400 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-[10px] md:text-sm font-medium flex items-center space-x-2">
+          <CircleAlert className="w-4 h-4 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      <section className="space-y-6">
+      <section className="space-y-6 md:space-y-8">
         <AssetForm onAdd={handleAddAsset} />
         <AssetList 
           assets={state.assets} 

@@ -1,6 +1,19 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, StateStorage, createJSONStorage } from 'zustand/middleware';
+import { get, set as idbSet, del } from 'idb-keyval';
 import { firebaseService } from './firebase-service';
+
+const storage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    return (await get(name)) || null;
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    await idbSet(name, value);
+  },
+  removeItem: async (name: string): Promise<void> => {
+    await del(name);
+  },
+};
 
 export type CashPosition = {
   id: string;
@@ -65,6 +78,8 @@ export interface ToastMessage {
 
 interface FinanceState {
   threshold: number;
+  monthlyLivingCost: number;
+  livingCondition: string;
   mainWalletId: string;
   cashPositions: CashPosition[];
   stats: {
@@ -93,9 +108,11 @@ interface FinanceState {
   hasHydrated: boolean;
   isSyncingFromFirebase: boolean;
   isSyncingToFirebase: boolean;
+  lastSync: string | null;
   setHasHydrated: (val: boolean) => void;
   setIsSyncingFromFirebase: (val: boolean) => void;
   setIsSyncingToFirebase: (val: boolean) => void;
+  setLastSync: (val: string) => void;
 
   // Sync Actions
   setUserData: (data: any) => void;
@@ -135,6 +152,7 @@ interface FinanceState {
   toggleLoanStatus: (id: string, isActive: boolean) => void;
   updateLoanAmount: (id: string, newAmount: number) => void;
   setThreshold: (val: number) => void;
+  setThresholdCalculator: (cost: number, condition: string) => void;
   logout: () => void;
   toggleSidebarCollapse: () => void;
   resetData: () => void;
@@ -144,6 +162,8 @@ export const useFinanceStore = create<FinanceState>()(
   persist(
     (set) => ({
       threshold: 0,
+      monthlyLivingCost: 0,
+      livingCondition: 'parents_no_demands',
       mainWalletId: '',
       cashPositions: [],
       stats: {
@@ -175,17 +195,53 @@ export const useFinanceStore = create<FinanceState>()(
       hasHydrated: false,
       isSyncingFromFirebase: false,
       isSyncingToFirebase: false,
+      lastSync: null,
       setHasHydrated: (val) => set({ hasHydrated: val }),
       setIsSyncingFromFirebase: (val) => set({ isSyncingFromFirebase: val }),
       setIsSyncingToFirebase: (val) => set({ isSyncingToFirebase: val }),
+      setLastSync: (val) => set({ lastSync: val }),
 
-      setUserData: (data) => set((state) => ({
-        threshold: data?.settings?.threshold ?? state.threshold,
-        mainWalletId: data?.settings?.mainWalletId ?? state.mainWalletId,
-        privacyMode: data?.settings?.privacyMode ?? state.privacyMode,
-        sessionTimeout: data?.settings?.sessionTimeout ?? state.sessionTimeout,
-        receivableCategories: data?.receivableCategories ?? state.receivableCategories,
-      })),
+      setUserData: (data) => {
+        const inflowTypes = ['Pemasukan', 'Pelunasan Piutang', 'Penerimaan Pinjaman', 'Jual Aset'];
+        const outflowTypes = ['Pengeluaran', 'Pemberian Piutang', 'Pembayaran Pinjaman', 'Beli Aset'];
+        
+        let income = 0;
+        let expense = 0;
+        const transactions = data?.transactions || [];
+        const availablePeriods: { [year: string]: string[] } = {};
+        
+        transactions.forEach((t: any) => {
+          if (inflowTypes.includes(t.type)) income += t.nominal;
+          if (outflowTypes.includes(t.type)) expense += t.nominal;
+          
+          // Reconstruct available periods
+          const d = new Date(t.date);
+          const year = d.getFullYear().toString();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          if (!availablePeriods[year]) availablePeriods[year] = [];
+          if (!availablePeriods[year].includes(month)) {
+            availablePeriods[year].push(month);
+            availablePeriods[year].sort();
+          }
+        });
+
+        set((state) => ({
+          threshold: data?.settings?.threshold ?? data?.threshold ?? state.threshold,
+          monthlyLivingCost: data?.settings?.monthlyLivingCost ?? data?.monthlyLivingCost ?? state.monthlyLivingCost,
+          livingCondition: data?.settings?.livingCondition ?? data?.livingCondition ?? state.livingCondition,
+          mainWalletId: data?.settings?.mainWalletId ?? data?.mainWalletId ?? state.mainWalletId,
+          privacyMode: data?.settings?.privacyMode ?? data?.privacyMode ?? state.privacyMode,
+          sessionTimeout: data?.settings?.sessionTimeout ?? data?.sessionTimeout ?? state.sessionTimeout,
+          receivableCategories: data?.receivableCategories ?? state.receivableCategories,
+          cashPositions: data?.cashPositions ?? state.cashPositions,
+          assets: data?.assets ?? state.assets,
+          receivables: data?.receivables ?? state.receivables,
+          loans: data?.loans ?? state.loans,
+          transactions: transactions,
+          availablePeriods: availablePeriods,
+          stats: { income, expense }
+        }));
+      },
       setCashPositions: (data) => set({ cashPositions: data }),
       setAssets: (data) => set({ assets: data }),
       setReceivables: (data) => set({ receivables: data }),
@@ -208,9 +264,17 @@ export const useFinanceStore = create<FinanceState>()(
 
       setLoggedIn: (val, uid) => set({ isLoggedIn: val, userId: uid || null }),
 
-      togglePrivacyMode: () => set((state) => ({ privacyMode: !state.privacyMode })),
+      togglePrivacyMode: () => {
+        set((state) => ({ privacyMode: !state.privacyMode }));
+        const { userId, privacyMode } = useFinanceStore.getState();
+        if (userId) firebaseService.updateUserSettings(userId, { privacyMode });
+      },
 
-      setSessionTimeout: (val) => set({ sessionTimeout: val }),
+      setSessionTimeout: (val) => {
+        set({ sessionTimeout: val });
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.updateUserSettings(userId, { sessionTimeout: val });
+      },
 
       setCurrentDate: (year, month) => set({ currentYear: year, currentMonth: month }),
 
@@ -332,117 +396,198 @@ export const useFinanceStore = create<FinanceState>()(
 
           return newState;
         });
+
+        // Explicitly sync the updated balances to Firebase to avoid race conditions
+        // with the automatic sync listener which might be blocked by isSyncingFromFirebase
+        const finalState = useFinanceStore.getState();
+        if (finalState.userId) {
+          finalState.setIsSyncingToFirebase(true);
+          try {
+            await firebaseService.syncBalances(finalState.userId, finalState);
+          } finally {
+            setTimeout(() => {
+              useFinanceStore.getState().setIsSyncingToFirebase(false);
+            }, 1000);
+          }
+        }
       },
 
-      addCashPosition: (name, type = 'bank') => set((state) => ({
-        cashPositions: [
-          ...state.cashPositions,
-          { id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, name, balance: 0, type, isActive: true }
-        ]
-      })),
+      addCashPosition: (name, type = 'bank') => {
+        const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        const newData = { id, name, balance: 0, type, isActive: true };
+        set((state) => ({ cashPositions: [...state.cashPositions, newData] }));
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.addCashPosition(userId, newData);
+      },
 
-      deleteCashPosition: (id) => set((state) => ({
-        cashPositions: state.cashPositions.filter(p => p.id !== id)
-      })),
+      deleteCashPosition: (id) => {
+        set((state) => ({ cashPositions: state.cashPositions.filter(p => p.id !== id) }));
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.deleteCashPosition(userId, id);
+      },
 
-      editCashPosition: (id, newName) => set((state) => ({
-        cashPositions: state.cashPositions.map(p => p.id === id ? { ...p, name: newName } : p)
-      })),
+      editCashPosition: (id, newName) => {
+        set((state) => ({ cashPositions: state.cashPositions.map(p => p.id === id ? { ...p, name: newName } : p) }));
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.updateCashPosition(userId, id, { name: newName });
+      },
 
-      toggleCashPositionStatus: (id, isActive) => set((state) => ({
-        cashPositions: state.cashPositions.map(p => p.id === id ? { ...p, isActive } : p)
-      })),
+      toggleCashPositionStatus: (id, isActive) => {
+        set((state) => ({ cashPositions: state.cashPositions.map(p => p.id === id ? { ...p, isActive } : p) }));
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.updateCashPosition(userId, id, { isActive });
+      },
 
-      setMainWallet: (id) => set({ mainWalletId: id }),
+      setMainWallet: (id) => {
+        set({ mainWalletId: id });
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.updateUserSettings(userId, { mainWalletId: id });
+      },
 
-      addAsset: (name, type, subType) => set((state) => ({
-        assets: [
-          ...state.assets,
-          { id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, name, value: 0, type, subType, isActive: true }
-        ]
-      })),
+      addAsset: (name, type, subType) => {
+        const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        const newData = { id, name, value: 0, type, subType, isActive: true };
+        set((state) => ({ assets: [...state.assets, newData] }));
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.addAsset(userId, newData);
+      },
 
-      deleteAsset: (id) => set((state) => ({
-        assets: state.assets.filter(a => a.id !== id)
-      })),
+      deleteAsset: (id) => {
+        set((state) => ({ assets: state.assets.filter(a => a.id !== id) }));
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.deleteAsset(userId, id);
+      },
 
-      editAsset: (id, newName) => set((state) => ({
-        assets: state.assets.map(a => a.id === id ? { ...a, name: newName } : a)
-      })),
+      editAsset: (id, newName) => {
+        set((state) => ({ assets: state.assets.map(a => a.id === id ? { ...a, name: newName } : a) }));
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.updateAsset(userId, id, { name: newName });
+      },
 
-      toggleAssetStatus: (id, isActive) => set((state) => ({
-        assets: state.assets.map(a => a.id === id ? { ...a, isActive } : a)
-      })),
+      toggleAssetStatus: (id, isActive) => {
+        set((state) => ({ assets: state.assets.map(a => a.id === id ? { ...a, isActive } : a) }));
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.updateAsset(userId, id, { isActive });
+      },
 
-      updateAssetValue: (name) => set((state) => {
-        const newState = {
-          assets: state.assets.map(a => ({ ...a }))
-        };
-        const assetIndex = newState.assets.findIndex(a => a.name === name);
-        if (assetIndex !== -1) {
-          const increase = 1 + (Math.random() * 0.04 + 0.01);
-          newState.assets[assetIndex].value = Math.round(newState.assets[assetIndex].value * increase);
-        }
-        return newState;
-      }),
+      updateAssetValue: (name) => {
+        set((state) => {
+          const newState = {
+            assets: state.assets.map(a => ({ ...a }))
+          };
+          const assetIndex = newState.assets.findIndex(a => a.name === name);
+          if (assetIndex !== -1) {
+            const increase = 1 + (Math.random() * 0.04 + 0.01);
+            newState.assets[assetIndex].value = Math.round(newState.assets[assetIndex].value * increase);
+            
+            // Sync to firebase
+            const { userId } = useFinanceStore.getState();
+            if (userId) {
+              firebaseService.updateAsset(userId, newState.assets[assetIndex].id, { value: newState.assets[assetIndex].value });
+            }
+          }
+          return newState;
+        });
+      },
 
-      updateCategoryLimit: (type, newLimit) => set((state) => ({
-        receivableCategories: state.receivableCategories.map(c => c.type === type ? { ...c, limit: newLimit } : c)
-      })),
+      updateCategoryLimit: (type, newLimit) => {
+        set((state) => ({
+          receivableCategories: state.receivableCategories.map(c => c.type === type ? { ...c, limit: newLimit } : c)
+        }));
+        const { userId, receivableCategories } = useFinanceStore.getState();
+        if (userId) firebaseService.updateReceivableCategories(userId, receivableCategories);
+      },
 
-      addReceivable: (name, type) => set((state) => {
-        // Check for unique name
-        if (state.receivables.some(r => r.name.toLowerCase() === name.toLowerCase())) {
-          return state;
-        }
-        return {
-          receivables: [
-            ...state.receivables,
-            { id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, name, type, amount: 0, isActive: true }
-          ]
-        };
-      }),
+      addReceivable: (name, type) => {
+        set((state) => {
+          if (state.receivables.some(r => r.name.toLowerCase() === name.toLowerCase())) {
+            return state;
+          }
+          const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          const newData = { id, name, type, amount: 0, isActive: true };
+          
+          const { userId } = useFinanceStore.getState();
+          if (userId) firebaseService.addReceivable(userId, newData);
+          
+          return {
+            receivables: [
+              ...state.receivables,
+              newData
+            ]
+          };
+        });
+      },
 
-      deleteReceivable: (id) => set((state) => ({
-        receivables: state.receivables.filter(r => r.id !== id)
-      })),
+      deleteReceivable: (id) => {
+        set((state) => ({ receivables: state.receivables.filter(r => r.id !== id) }));
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.deleteReceivable(userId, id);
+      },
 
-      toggleReceivableStatus: (id, isActive) => set((state) => ({
-        receivables: state.receivables.map(r => r.id === id ? { ...r, isActive } : r)
-      })),
+      toggleReceivableStatus: (id, isActive) => {
+        set((state) => ({ receivables: state.receivables.map(r => r.id === id ? { ...r, isActive } : r) }));
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.updateReceivable(userId, id, { isActive });
+      },
 
-      addLoan: (data, targetCashId) => set((state) => {
-        const newLoans = [
-          ...state.loans,
-          { ...data, id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, isActive: true }
-        ];
+      addLoan: (data, targetCashId) => {
+        set((state) => {
+          const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          const newData = { ...data, id, isActive: true };
+          const newLoans = [...state.loans, newData];
 
-        let newCashPositions = state.cashPositions;
-        if (targetCashId) {
-          newCashPositions = state.cashPositions.map(p => 
-            p.id === targetCashId ? { ...p, balance: p.balance + data.amount } : p
-          );
-        }
+          let newCashPositions = state.cashPositions;
+          if (targetCashId) {
+            newCashPositions = state.cashPositions.map(p => 
+              p.id === targetCashId ? { ...p, balance: p.balance + data.amount } : p
+            );
+          }
 
-        return {
-          loans: newLoans,
-          cashPositions: newCashPositions
-        };
-      }),
+          const { userId } = useFinanceStore.getState();
+          if (userId) {
+            firebaseService.addLoan(userId, newData);
+            if (targetCashId) {
+              const updatedCash = newCashPositions.find(p => p.id === targetCashId);
+              if (updatedCash) firebaseService.updateCashPosition(userId, targetCashId, { balance: updatedCash.balance });
+            }
+          }
 
-      deleteLoan: (id) => set((state) => ({
-        loans: state.loans.filter(l => l.id !== id)
-      })),
+          return {
+            loans: newLoans,
+            cashPositions: newCashPositions
+          };
+        });
+      },
 
-      toggleLoanStatus: (id, isActive) => set((state) => ({
-        loans: state.loans.map(l => l.id === id ? { ...l, isActive } : l)
-      })),
+      deleteLoan: (id) => {
+        set((state) => ({ loans: state.loans.filter(l => l.id !== id) }));
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.deleteLoan(userId, id);
+      },
 
-      updateLoanAmount: (id, newAmount) => set((state) => ({
-        loans: state.loans.map(l => l.id === id ? { ...l, amount: newAmount } : l)
-      })),
+      toggleLoanStatus: (id, isActive) => {
+        set((state) => ({ loans: state.loans.map(l => l.id === id ? { ...l, isActive } : l) }));
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.updateLoan(userId, id, { isActive });
+      },
 
-      setThreshold: (val) => set({ threshold: val }),
+      updateLoanAmount: (id, newAmount) => {
+        set((state) => ({ loans: state.loans.map(l => l.id === id ? { ...l, amount: newAmount } : l) }));
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.updateLoan(userId, id, { amount: newAmount });
+      },
+
+      setThreshold: (val) => {
+        set({ threshold: val });
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.updateUserSettings(userId, { threshold: val });
+      },
+
+      setThresholdCalculator: (cost, condition) => {
+        set({ monthlyLivingCost: cost, livingCondition: condition });
+        const { userId } = useFinanceStore.getState();
+        if (userId) firebaseService.updateUserSettings(userId, { monthlyLivingCost: cost, livingCondition: condition });
+      },
 
       logout: () => {
         set({ isLoggedIn: false, userId: null });
@@ -455,6 +600,8 @@ export const useFinanceStore = create<FinanceState>()(
 
       resetData: () => set({
         threshold: 0,
+        monthlyLivingCost: 0,
+        livingCondition: 'parents_no_demands',
         mainWalletId: '',
         cashPositions: [],
         stats: { income: 0, expense: 0 },
@@ -473,6 +620,7 @@ export const useFinanceStore = create<FinanceState>()(
     }),
     {
       name: 'sleepwell-finance-storage',
+      storage: createJSONStorage(() => storage),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

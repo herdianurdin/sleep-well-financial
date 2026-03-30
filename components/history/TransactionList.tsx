@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Clock, ArrowUpRight, ArrowDownRight, RefreshCw, Search, Filter, Calendar, ChevronRight, ChevronDown } from 'lucide-react';
-import { useFinanceStore } from '@/lib/store';
+import { Clock, ArrowUpRight, ArrowDownRight, RefreshCw, Search, Filter, Calendar, ChevronRight, ChevronDown, Info } from 'lucide-react';
+import { useFinanceStore, Transaction } from '@/lib/store';
 import { formatCurrency } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { TransactionDetailModal } from './TransactionDetailModal';
 
 export function TransactionList() {
   const { transactions, currentYear, currentMonth, setCurrentDate, availablePeriods } = useFinanceStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('Semua');
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   
   // Date Filtering State
   const selectedMonth = currentMonth - 1; // 0-indexed for UI
@@ -113,23 +115,33 @@ export function TransactionList() {
 
   return (
     <div className="space-y-6">
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {selectedTransaction && (
+          <TransactionDetailModal 
+            transaction={selectedTransaction} 
+            onClose={() => setSelectedTransaction(null)} 
+          />
+        )}
+      </AnimatePresence>
+
       {/* Search and Filter Bar */}
-      <div className="bg-white dark:bg-slate-900 p-4 md:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             <input 
               type="text"
               placeholder="Cari catatan, kategori, atau tipe..."
-              className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-900/5 dark:focus:ring-white/5 transition-all text-sm text-slate-900 dark:text-slate-100"
+              className="w-full pl-11 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-900/5 dark:focus:ring-white/5 transition-all text-sm text-slate-900 dark:text-slate-100"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="relative min-w-[180px]">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
+          <div className="relative min-w-[160px]">
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             <select 
-              className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/5 dark:focus:ring-white/5 transition-all text-sm appearance-none bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100"
+              className="w-full pl-11 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/5 dark:focus:ring-white/5 transition-all text-sm appearance-none bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100"
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
             >
@@ -140,51 +152,52 @@ export function TransactionList() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-4 pt-2 border-t border-slate-50 dark:border-slate-800/50">
-          <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-50 dark:border-slate-800/50">
+          <div className="flex items-center space-x-3">
             <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-            <select 
-              className="text-sm font-bold text-slate-700 dark:text-slate-300 focus:outline-none bg-transparent cursor-pointer"
-              value={selectedMonth}
-              onChange={(e) => {
-                setCurrentDate(selectedYear, parseInt(e.target.value) + 1);
-                setItemsPerPage(10);
-              }}
-            >
-              {availableMonths.length > 0 ? (
-                availableMonths.map((m) => (
-                  <option key={m} value={m - 1} className="bg-white dark:bg-slate-900">
-                    {months[m - 1]}
+            <div className="flex items-center space-x-1">
+              <select 
+                className="text-[11px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none bg-transparent cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors"
+                value={selectedMonth}
+                onChange={(e) => {
+                  setCurrentDate(selectedYear, parseInt(e.target.value) + 1);
+                  setItemsPerPage(10);
+                }}
+              >
+                {availableMonths.length > 0 ? (
+                  availableMonths.map((m) => (
+                    <option key={m} value={m - 1} className="bg-white dark:bg-slate-900">
+                      {months[m - 1]}
+                    </option>
+                  ))
+                ) : (
+                  <option value={selectedMonth} className="bg-white dark:bg-slate-900">
+                    {months[selectedMonth]}
                   </option>
-                ))
-              ) : (
-                <option value={selectedMonth} className="bg-white dark:bg-slate-900">
-                  {months[selectedMonth]}
-                </option>
-              )}
-            </select>
-            <select 
-              className="text-sm font-bold text-slate-700 dark:text-slate-300 focus:outline-none bg-transparent cursor-pointer"
-              value={selectedYear}
-              onChange={(e) => {
-                const newYear = parseInt(e.target.value);
-                // When year changes, check if current month is available in new year
-                const monthsInNewYear = (availablePeriods || {})[newYear.toString()] || [];
-                let newMonth = currentMonth;
-                if (monthsInNewYear.length > 0 && !monthsInNewYear.includes(currentMonth.toString().padStart(2, '0'))) {
-                  newMonth = parseInt(monthsInNewYear[monthsInNewYear.length - 1]);
-                }
-                setCurrentDate(newYear, newMonth);
-                setItemsPerPage(10);
-              }}
-            >
-              {availableYears.map(year => (
-                <option key={year} value={year} className="bg-white dark:bg-slate-900">{year}</option>
-              ))}
-            </select>
+                )}
+              </select>
+              <select 
+                className="text-[11px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none bg-transparent cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors"
+                value={selectedYear}
+                onChange={(e) => {
+                  const newYear = parseInt(e.target.value);
+                  const monthsInNewYear = (availablePeriods || {})[newYear.toString()] || [];
+                  let newMonth = currentMonth;
+                  if (monthsInNewYear.length > 0 && !monthsInNewYear.includes(currentMonth.toString().padStart(2, '0'))) {
+                    newMonth = parseInt(monthsInNewYear[monthsInNewYear.length - 1]);
+                  }
+                  setCurrentDate(newYear, newMonth);
+                  setItemsPerPage(10);
+                }}
+              >
+                {availableYears.map(year => (
+                  <option key={year} value={year} className="bg-white dark:bg-slate-900">{year}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="ml-auto text-xs text-slate-400 dark:text-slate-500 font-medium self-center">
-            Menampilkan {paginatedTransactions.length} dari {filteredTransactions.length} transaksi
+          <div className="text-[9px] uppercase tracking-widest text-slate-400 dark:text-slate-500 font-bold">
+            {paginatedTransactions.length} / {filteredTransactions.length} Transaksi
           </div>
         </div>
       </div>
@@ -201,18 +214,19 @@ export function TransactionList() {
                    animate={{ opacity: 1 }}
                    exit={{ opacity: 0 }}
                    key={trx.id} 
-                   className="p-4 md:p-6 flex items-start justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
+                   onClick={() => setSelectedTransaction(trx)}
+                   className="p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group cursor-pointer"
                 >
-                  <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-slate-700 shrink-0 mt-1 group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
+                  <div className="flex items-start space-x-3 mb-3 sm:mb-0">
+                    <div className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-slate-700 shrink-0 group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
                       {getIcon(trx.type)}
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center space-x-2">
-                        <p className="font-bold text-slate-900 dark:text-slate-100">{trx.type}</p>
-                        <ChevronRight className="w-3 h-3 text-slate-300 dark:text-slate-600" />
+                        <p className="font-bold text-xs md:text-sm text-slate-900 dark:text-slate-100 truncate">{trx.type}</p>
+                        <Info className="w-3 h-3 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                         {trx.type === 'Mutasi Kas' 
                           ? `${trx.posAsal} → ${trx.posTujuan}`
                           : trx.type === 'Pemasukan'
@@ -220,20 +234,20 @@ export function TransactionList() {
                           : `Dari: ${trx.posAsal} (Untuk: ${trx.posTujuan})`}
                       </p>
                       {trx.notes && (
-                        <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 italic">&quot;{trx.notes}&quot;</p>
+                        <p className="text-[10px] text-slate-600 dark:text-slate-300 mt-0.5 italic truncate max-w-[180px] md:max-w-xs">&quot;{trx.notes}&quot;</p>
                       )}
-                      {trx.profitOrLoss !== undefined && trx.profitOrLoss !== 0 && (
-                        <p className={`text-xs font-bold mt-1 ${trx.profitOrLoss > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                          {trx.profitOrLoss > 0 ? 'Untung' : 'Rugi'}: {formatCurrency(Math.abs(trx.profitOrLoss))}
-                        </p>
-                      )}
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{formatDate(trx.date)}</p>
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1 font-medium">{formatDate(trx.date)}</p>
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className={`font-bold ${trx.type === 'Pengeluaran' ? 'text-rose-600 dark:text-rose-400' : trx.type === 'Pemasukan' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                  <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center pl-12 sm:pl-0">
+                    <p className={`font-bold text-sm ${trx.type === 'Pengeluaran' ? 'text-rose-600 dark:text-rose-400' : trx.type === 'Pemasukan' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'}`}>
                       {trx.type === 'Pengeluaran' ? '-' : trx.type === 'Pemasukan' ? '+' : ''}{formatCurrency(trx.nominal)}
                     </p>
+                    {trx.profitOrLoss !== undefined && trx.profitOrLoss !== 0 && (
+                      <p className={`text-[9px] font-bold mt-0.5 ${trx.profitOrLoss > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                        {trx.profitOrLoss > 0 ? 'Untung' : 'Rugi'}: {formatCurrency(Math.abs(trx.profitOrLoss))}
+                      </p>
+                    )}
                   </div>
                 </motion.div>
               ))}
