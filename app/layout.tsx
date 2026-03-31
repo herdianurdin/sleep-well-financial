@@ -9,6 +9,10 @@ export const metadata: Metadata = {
   title: 'Sleep-Well Finance',
   description: 'Sistem Pertahanan Kas & Pencatatan Keuangan Pribadi',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/icons/icon-192x192.png',
+    apple: '/icons/icon-192x192.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
