@@ -10,8 +10,15 @@ export const metadata: Metadata = {
   description: 'Sistem Pertahanan Kas & Pencatatan Keuangan Pribadi',
   manifest: '/manifest.json',
   icons: {
-    icon: '/icons/icon-192x192.png',
-    apple: '/icons/icon-192x192.png',
+    icon: [
+      { url: '/icons/icon-192x192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/icons/icon-512x512.png', type: 'image/png', sizes: '512x512' }
+    ],
+    shortcut: ['/icons/icon-192x192.png'],
+    apple: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' }
+    ],
   },
   appleWebApp: {
     capable: true,

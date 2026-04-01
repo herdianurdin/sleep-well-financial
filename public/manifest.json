@@ -2,7 +2,7 @@
   "name": "Sleep-Well Finance",
   "short_name": "Sleep-Well",
   "description": "Sistem Pertahanan Kas & Pencatatan Keuangan Pribadi",
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#141414",
   "theme_color": "#141414",
@@ -12,13 +12,25 @@
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
