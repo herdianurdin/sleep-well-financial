@@ -24,11 +24,19 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ type, cashPositions, receivables, loans, assets, onSubmit }: TransactionFormProps) {
+  const getLocalDateString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [nominal, setNominal] = useState('');
   const [posAsal, setPosAsal] = useState(type === 'Pemasukan' ? 'External' : '');
   const [posTujuan, setPosTujuan] = useState(type === 'Pengeluaran' ? 'Kebutuhan Pokok' : '');
   const [relatedId, setRelatedId] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getLocalDateString());
   const [notes, setNotes] = useState('');
   
   // For Jual Aset
@@ -63,12 +71,21 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
       else profitOrLossValue = 0;
     }
 
+    let finalDateIso = new Date().toISOString();
+    if (date) {
+      const [year, month, day] = date.split('-').map(Number);
+      const now = new Date();
+      // Create a date object in the local timezone with the selected date and current time
+      const localDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
+      finalDateIso = localDate.toISOString();
+    }
+
     onSubmit({
       nominal: amount,
       posAsal: posAsal || 'Lainnya',
       posTujuan: posTujuan || 'Lainnya',
       relatedId: relatedId || undefined,
-      date: new Date(date).toISOString(),
+      date: finalDateIso,
       notes: notes || undefined,
       profitOrLoss: profitOrLossValue
     });

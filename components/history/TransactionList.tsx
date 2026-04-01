@@ -29,15 +29,17 @@ export function TransactionList() {
   }, [availablePeriods]);
 
   const availableMonths = useMemo(() => {
-    const months = (availablePeriods || {})[selectedYear.toString()] || [];
-    if (months.length === 0) {
-      // If it's current year, at least show current month
-      if (selectedYear === new Date().getFullYear()) {
-        return [new Date().getMonth() + 1];
-      }
-      return [];
+    const months = [...((availablePeriods || {})[selectedYear.toString()] || [])].map(Number);
+    
+    // Always include the current real-world month if we are viewing the current year
+    const currentRealYear = new Date().getFullYear();
+    const currentRealMonth = new Date().getMonth() + 1;
+    
+    if (selectedYear === currentRealYear && !months.includes(currentRealMonth)) {
+      months.push(currentRealMonth);
     }
-    return months.map(Number).sort((a, b) => a - b);
+    
+    return months.sort((a, b) => a - b);
   }, [availablePeriods, selectedYear]);
   
   // Pagination State

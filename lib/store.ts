@@ -210,20 +210,22 @@ export const useFinanceStore = create<FinanceState>()(
         const transactions = data?.transactions || [];
         const availablePeriods: { [year: string]: string[] } = {};
         
-        transactions.forEach((t: any) => {
-          if (inflowTypes.includes(t.type)) income += t.nominal;
-          if (outflowTypes.includes(t.type)) expense += t.nominal;
-          
-          // Reconstruct available periods
-          const d = new Date(t.date);
-          const year = d.getFullYear().toString();
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          if (!availablePeriods[year]) availablePeriods[year] = [];
-          if (!availablePeriods[year].includes(month)) {
-            availablePeriods[year].push(month);
-            availablePeriods[year].sort();
-          }
-        });
+        if (data?.transactions) {
+          transactions.forEach((t: any) => {
+            if (inflowTypes.includes(t.type)) income += t.nominal;
+            if (outflowTypes.includes(t.type)) expense += t.nominal;
+            
+            // Reconstruct available periods
+            const d = new Date(t.date);
+            const year = d.getFullYear().toString();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            if (!availablePeriods[year]) availablePeriods[year] = [];
+            if (!availablePeriods[year].includes(month)) {
+              availablePeriods[year].push(month);
+              availablePeriods[year].sort();
+            }
+          });
+        }
 
         set((state) => ({
           threshold: data?.settings?.threshold ?? data?.threshold ?? state.threshold,
@@ -237,9 +239,11 @@ export const useFinanceStore = create<FinanceState>()(
           assets: data?.assets ?? state.assets,
           receivables: data?.receivables ?? state.receivables,
           loans: data?.loans ?? state.loans,
-          transactions: transactions,
-          availablePeriods: availablePeriods,
-          stats: { income, expense }
+          ...(data?.transactions ? {
+            transactions: transactions,
+            availablePeriods: availablePeriods,
+            stats: { income, expense }
+          } : {})
         }));
       },
       setCashPositions: (data) => set({ cashPositions: data }),
@@ -623,6 +627,9 @@ export const useFinanceStore = create<FinanceState>()(
       storage: createJSONStorage(() => storage),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
+        // Ensure we always start at the current real-world month
+        const now = new Date();
+        state?.setCurrentDate(now.getFullYear(), now.getMonth() + 1);
       },
     }
   )
