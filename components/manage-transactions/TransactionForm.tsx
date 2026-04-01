@@ -20,7 +20,7 @@ interface TransactionFormProps {
     date: string;
     notes?: string;
     profitOrLoss?: number;
-  }) => void;
+  }) => void | Promise<void>;
 }
 
 export function TransactionForm({ type, cashPositions, receivables, loans, assets, onSubmit }: TransactionFormProps) {
@@ -45,6 +45,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   let notesPlaceholder = "Catatan tambahan (opsional)";
   if (type === 'Pemberian Piutang') notesPlaceholder = "Contoh: Untuk biaya rumah sakit";
@@ -60,7 +61,10 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
     setShowConfirmModal(true);
   };
 
-  const handleConfirmSubmit = () => {
+  const handleConfirmSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
     const amount = parseInputNumber(nominal);
     
     let profitOrLossValue: number | undefined = undefined;
@@ -80,28 +84,32 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
       finalDateIso = localDate.toISOString();
     }
 
-    onSubmit({
-      nominal: amount,
-      posAsal: posAsal || 'Lainnya',
-      posTujuan: posTujuan || 'Lainnya',
-      relatedId: relatedId || undefined,
-      date: finalDateIso,
-      notes: notes || undefined,
-      profitOrLoss: profitOrLossValue
-    });
+    try {
+      await onSubmit({
+        nominal: amount,
+        posAsal: posAsal || 'Lainnya',
+        posTujuan: posTujuan || 'Lainnya',
+        relatedId: relatedId || undefined,
+        date: finalDateIso,
+        notes: notes || undefined,
+        profitOrLoss: profitOrLossValue
+      });
 
-    setShowConfirmModal(false);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
+      setShowConfirmModal(false);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
 
-    // Reset form
-    setNominal('');
-    setPosAsal(type === 'Pemasukan' ? 'External' : '');
-    setPosTujuan(type === 'Pengeluaran' ? 'Kebutuhan Pokok' : '');
-    setRelatedId('');
-    setNotes('');
-    setSaleStatus('Impas');
-    setProfitOrLossNominal('');
+      // Reset form
+      setNominal('');
+      setPosAsal(type === 'Pemasukan' ? 'External' : '');
+      setPosTujuan(type === 'Pengeluaran' ? 'Kebutuhan Pokok' : '');
+      setRelatedId('');
+      setNotes('');
+      setSaleStatus('Impas');
+      setProfitOrLossNominal('');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -463,9 +471,10 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                 </button>
                 <button
                   onClick={handleConfirmSubmit}
-                  className="flex-1 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs md:text-sm font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors"
+                  disabled={isSubmitting}
+                  className="flex-1 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs md:text-sm font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Ya, Simpan
+                  {isSubmitting ? 'Menyimpan...' : 'Ya, Simpan'}
                 </button>
               </div>
             </motion.div>

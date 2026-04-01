@@ -14,8 +14,8 @@ export default function ManageTransactionsPage() {
     setType(newType);
   };
 
-  const handleSubmit = (data: { nominal: number; posAsal: string; posTujuan: string; relatedId?: string; date: string; notes?: string; profitOrLoss?: number }) => {
-    addTransaction({
+  const handleSubmit = async (data: { nominal: number; posAsal: string; posTujuan: string; relatedId?: string; date: string; notes?: string; profitOrLoss?: number }) => {
+    await addTransaction({
       type,
       nominal: data.nominal,
       posAsal: data.posAsal,

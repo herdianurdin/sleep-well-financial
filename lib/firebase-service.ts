@@ -258,8 +258,33 @@ export const firebaseService = {
       callback(data);
     });
   },
+  reconstructAvailablePeriods: async (userId: string) => {
+    const txRef = ref(db, `transactions/${userId}`);
+    const periodsRef = ref(db, `users/${userId}/availablePeriods`);
+    
+    try {
+      const snapshot = await get(txRef);
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const reconstructed: { [year: string]: string[] } = {};
+        
+        Object.keys(data).forEach(year => {
+          reconstructed[year] = Object.keys(data[year]).sort();
+        });
+        
+        await set(periodsRef, reconstructed);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error reconstructing periods:", error);
+      return false;
+    }
+  },
+
   listenToAvailablePeriods: (userId: string, callback: (data: any) => void) => {
     const periodsRef = ref(db, `users/${userId}/availablePeriods`);
+    
     return onValue(periodsRef, (snapshot) => {
       if (snapshot.exists()) {
         callback(snapshot.val());

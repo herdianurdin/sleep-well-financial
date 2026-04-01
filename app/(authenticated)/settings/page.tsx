@@ -177,6 +177,7 @@ export default function SettingsPage() {
     setIsSyncing(true);
     try {
       await firebaseService.syncFullState(state.userId, state);
+      await firebaseService.reconstructAvailablePeriods(state.userId);
       const now = new Date();
       const timeStr = `Hari ini, ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       state.setLastSync(timeStr);
@@ -1035,7 +1036,7 @@ export default function SettingsPage() {
         {activeModal === 'sync' && (
           <Modal 
             title="Sinkronisasi Manual"
-            description="Sistem akan melakukan rekonsiliasi data lokal dengan Firebase Cloud."
+            description="Sistem akan melakukan rekonsiliasi data lokal dengan Firebase Cloud, termasuk memindai ulang seluruh riwayat transaksi untuk memperbaiki filter bulan/tahun yang hilang."
             onConfirm={handleForceSync}
             onClose={closeModal}
             confirmText="Mulai Sinkron"

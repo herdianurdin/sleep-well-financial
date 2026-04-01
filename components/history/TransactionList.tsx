@@ -90,7 +90,11 @@ export function TransactionList() {
         
         return matchesDate && matchesSearch && matchesFilter;
       })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => {
+        const timeA = a.timestamp || new Date(a.date).getTime();
+        const timeB = b.timestamp || new Date(b.date).getTime();
+        return timeB - timeA;
+      });
   }, [transactions, searchTerm, filterType, selectedMonth, selectedYear]);
 
   // Paginated List

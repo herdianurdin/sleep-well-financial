@@ -5,23 +5,19 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
-const isGithubActions = process.env.GITHUB_ACTIONS || false;
-const repo = 'sleep-well-financial';
-const basePath = isGithubActions ? `/${repo}` : '';
-
 export const metadata: Metadata = {
   title: 'Sleep-Well Finance',
   description: 'Sistem Pertahanan Kas & Pencatatan Keuangan Pribadi',
-  manifest: `${basePath}/manifest.json`,
+  manifest: '/manifest.json',
   icons: {
     icon: [
-      { url: `${basePath}/icons/icon-192x192.png`, type: 'image/png', sizes: '192x192' },
-      { url: `${basePath}/icons/icon-512x512.png`, type: 'image/png', sizes: '512x512' }
+      { url: '/icons/icon-192x192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/icons/icon-512x512.png', type: 'image/png', sizes: '512x512' }
     ],
-    shortcut: [`${basePath}/icons/icon-192x192.png`],
+    shortcut: ['/icons/icon-192x192.png'],
     apple: [
-      { url: `${basePath}/icons/icon-192x192.png`, sizes: '192x192', type: 'image/png' },
-      { url: `${basePath}/icons/icon-512x512.png`, sizes: '512x512', type: 'image/png' }
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' }
     ],
   },
   appleWebApp: {

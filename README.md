@@ -123,13 +123,45 @@ Variabel `GITHUB_ACTIONS=true` akan otomatis terdeteksi oleh `next.config.ts`. K
 - Mengatur `basePath` menjadi `/sleep-well-financial`.
 - Menonaktifkan optimasi gambar bawaan Next.js yang tidak didukung dalam mode export.
 
-## 📱 Setup PWA (Ikon)
+## 📱 Setup & Troubleshooting PWA
 
-Agar PWA berjalan sempurna saat diinstal, Anda perlu menambahkan ikon aplikasi:
-1. Siapkan logo aplikasi berukuran `192x192` dan `512x512` pixel (format PNG).
-2. Simpan di dalam folder `public/icons/` dengan nama:
-   - `icon-192x192.png`
-   - `icon-512x512.png`
+Aplikasi ini mendukung Progressive Web App (PWA) yang memungkinkan instalasi layaknya aplikasi native di Android dan iOS.
+
+### Persyaratan PWA agar Berfungsi:
+1. **HTTPS**: Aplikasi harus diakses melalui protokol `https://`.
+2. **Ikon**: Pastikan file `icon-192x192.png` dan `icon-512x512.png` tersedia di folder `public/icons/`.
+3. **Manifest**: File `public/manifest.json` harus terkonfigurasi dengan benar.
+4. **Service Worker**: Dihasilkan secara otomatis oleh `@ducanh2912/next-pwa` saat proses build.
+
+### Penanganan Masalah (Troubleshooting) PWA:
+- **Favicon atau Ikon Tidak Muncul**: 
+  Hal ini sering terjadi jika aplikasi di-deploy di subpath (seperti GitHub Pages `/sleep-well-financial/`) namun path ikon di `app/layout.tsx` di-hardcode dengan prefix subpath tersebut. Next.js secara otomatis akan menambahkan `basePath` ke semua aset statis. Oleh karena itu, path di `layout.tsx` harus tetap menggunakan absolute path standar (contoh: `/icons/icon-192x192.png`).
+- **Hanya Menjadi Shortcut Web (Bukan Native App)**:
+  Pastikan `start_url` di `manifest.json` diatur ke `.` atau `./` agar relatif terhadap lokasi manifest, terutama saat menggunakan `basePath`.
+- **iOS Tidak Menampilkan Prompt Install**:
+  iOS Safari tidak menampilkan banner "Add to Home Screen" secara otomatis. Pengguna harus menekan tombol "Share" > "Add to Home Screen". Ikon `apple-touch-icon` sudah dikonfigurasi di `layout.tsx` untuk mendukung hal ini.
+
+## ⚙️ Pengelolaan Sistem (System Management)
+
+Untuk menjaga agar sistem tetap berjalan optimal, perhatikan hal-hal berikut:
+
+1. **Manajemen Environment Variables di GitHub Actions**:
+   Pastikan semua variabel lingkungan (seperti kredensial Firebase) ditambahkan ke **Settings > Secrets and variables > Actions** di repository GitHub Anda. Panggil variabel tersebut di file `.github/workflows/deploy.yml` pada langkah `Build with Next.js`.
+
+2. **Update Dependensi**:
+   Lakukan pembaruan dependensi secara berkala menggunakan `npm update` atau `ncu -u` (npm-check-updates) untuk mendapatkan patch keamanan dan fitur terbaru dari Next.js, React, dan Firebase.
+
+3. **Monitoring Firebase**:
+   - Pantau penggunaan kuota Firebase Realtime Database di Firebase Console.
+   - Atur **Firebase Security Rules** (`database.rules.json`) seketat mungkin untuk mencegah akses tidak sah, terutama karena aplikasi ini menyimpan data finansial sensitif.
+
+4. **Pengujian PWA Lokal**:
+   Untuk menguji PWA di komputer lokal, jalankan perintah build dan start (bukan dev):
+   ```bash
+   npm run build
+   npm run start
+   ```
+   Service Worker dan fitur PWA (termasuk prompt instalasi) biasanya tidak aktif di mode development (`npm run dev`).
 
 ---
 *Dibuat untuk menjaga kesehatan finansial dan kualitas tidur Anda.* 🌙

@@ -42,6 +42,7 @@ export type Transaction = {
   date: string;
   notes?: string;
   profitOrLoss?: number;
+  timestamp?: number;
 };
 
 export type Receivable = {
@@ -314,7 +315,8 @@ export const useFinanceStore = create<FinanceState>()(
           relatedId,
           date: transactionDate,
           notes,
-          profitOrLoss
+          profitOrLoss,
+          timestamp: Date.now()
         };
 
         if (state.userId) {
@@ -341,13 +343,19 @@ export const useFinanceStore = create<FinanceState>()(
             assets: state.assets.map(a => ({ ...a }))
           };
 
-          // 1. Update Stats (only if it matches current month being viewed)
+          // 1 & 4. Update Stats and Record Transaction (only if it matches current month being viewed)
           if (parseInt(year) === state.currentYear && parseInt(month) === state.currentMonth) {
-            const inflowTypes = ['Pemasukan', 'Pelunasan Piutang', 'Penerimaan Pinjaman', 'Jual Aset'];
-            const outflowTypes = ['Pengeluaran', 'Pemberian Piutang', 'Pembayaran Pinjaman', 'Beli Aset'];
+            // Check if it already exists to avoid duplicates from listener
+            const exists = state.transactions.some(t => t.id === newTransaction.id);
+            if (!exists) {
+              const inflowTypes = ['Pemasukan', 'Pelunasan Piutang', 'Penerimaan Pinjaman', 'Jual Aset'];
+              const outflowTypes = ['Pengeluaran', 'Pemberian Piutang', 'Pembayaran Pinjaman', 'Beli Aset'];
 
-            if (inflowTypes.includes(type)) newState.stats.income += nominal;
-            if (outflowTypes.includes(type)) newState.stats.expense += nominal;
+              if (inflowTypes.includes(type)) newState.stats.income += nominal;
+              if (outflowTypes.includes(type)) newState.stats.expense += nominal;
+              
+              newState.transactions.push(newTransaction);
+            }
           }
 
           // 2. Update Cash Positions
@@ -386,15 +394,6 @@ export const useFinanceStore = create<FinanceState>()(
                 const decreaseAmount = profitOrLoss !== undefined ? nominal - profitOrLoss : nominal;
                 newState.assets[aIndex].value -= decreaseAmount;
               }
-            }
-          }
-
-          // 4. Record Transaction (only if it matches current month being viewed)
-          if (parseInt(year) === state.currentYear && parseInt(month) === state.currentMonth) {
-            // Check if it already exists to avoid duplicates from listener
-            const exists = newState.transactions.some(t => t.id === newTransaction.id);
-            if (!exists) {
-              newState.transactions.push(newTransaction);
             }
           }
 
