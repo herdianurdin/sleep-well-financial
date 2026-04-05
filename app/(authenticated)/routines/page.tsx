@@ -20,6 +20,7 @@ export default function RoutinesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ title: '', estimatedAmount: '' });
+  const [displayLimit, setDisplayLimit] = useState(10);
   
   // Delete confirmation state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -117,65 +118,78 @@ export default function RoutinesPage() {
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Tambahkan kewajiban bulanan Anda di sini</p>
           </div>
         ) : (
-          state.checklists.map((item) => {
-            const isCompleted = item.lastCompletedMonth === currentMonthStr;
-            
-            return (
-              <motion.div 
-                key={item.id}
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
-                  isCompleted 
-                    ? 'bg-slate-50 dark:bg-slate-800/30 border-slate-100 dark:border-slate-800 opacity-60' 
-                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm'
-                }`}
-              >
-                <div className="flex items-center space-x-4 min-w-0">
-                  <button
-                    onClick={() => state.toggleChecklist(item.id, currentMonthStr)}
-                    className={`w-6 h-6 rounded flex items-center justify-center shrink-0 transition-colors border ${
-                      isCompleted 
-                        ? 'bg-emerald-500 border-emerald-500 text-white' 
-                        : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-transparent hover:border-blue-500'
-                    }`}
-                  >
-                    <CheckSquare className="w-4 h-4" />
-                  </button>
-                  <div className="min-w-0">
-                    <p className={`text-sm sm:text-base font-bold truncate transition-all ${
-                      isCompleted ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-800 dark:text-slate-100'
-                    }`}>
-                      {item.title}
-                    </p>
-                    {item.estimatedAmount > 0 && (
-                      <p className={`text-xs font-medium mt-0.5 ${
-                        isCompleted ? 'text-slate-400/70 dark:text-slate-600' : 'text-slate-500 dark:text-slate-400'
+          <>
+            {state.checklists.slice(0, displayLimit).map((item) => {
+              const isCompleted = item.lastCompletedMonth === currentMonthStr;
+              
+              return (
+                <motion.div 
+                  key={item.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
+                    isCompleted 
+                      ? 'bg-slate-50 dark:bg-slate-800/30 border-slate-100 dark:border-slate-800 opacity-60' 
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-center space-x-4 min-w-0">
+                    <button
+                      onClick={() => state.toggleChecklist(item.id, currentMonthStr)}
+                      className={`w-6 h-6 rounded flex items-center justify-center shrink-0 transition-colors border ${
+                        isCompleted 
+                          ? 'bg-emerald-500 border-emerald-500 text-white' 
+                          : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-transparent hover:border-blue-500'
+                      }`}
+                    >
+                      <CheckSquare className="w-4 h-4" />
+                    </button>
+                    <div className="min-w-0">
+                      <p className={`text-sm sm:text-base font-bold truncate transition-all ${
+                        isCompleted ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-800 dark:text-slate-100'
                       }`}>
-                        Est: Rp {item.estimatedAmount.toLocaleString('id-ID')}
+                        {item.title}
                       </p>
-                    )}
+                      {item.estimatedAmount > 0 && (
+                        <p className={`text-xs font-medium mt-0.5 ${
+                          isCompleted ? 'text-slate-400/70 dark:text-slate-600' : 'text-slate-500 dark:text-slate-400'
+                        }`}>
+                          Est: Rp {item.estimatedAmount.toLocaleString('id-ID')}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
-                  <button 
-                    onClick={() => handleEdit(item)}
-                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button 
-                    onClick={() => handleDeleteClick(item)}
-                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </motion.div>
-            );
-          })
+                  
+                  <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
+                    <button 
+                      onClick={() => handleEdit(item)}
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteClick(item)}
+                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+            
+            {displayLimit < state.checklists.length && (
+              <div className="pt-4 flex justify-center">
+                <button
+                  onClick={() => setDisplayLimit(prev => prev + 10)}
+                  className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-bold rounded-xl transition-colors"
+                >
+                  Muat Lebih Banyak
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
