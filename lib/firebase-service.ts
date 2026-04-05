@@ -130,6 +130,7 @@ export const firebaseService = {
     updates[`receivables/${userId}`] = null;
     updates[`loans/${userId}`] = null;
     updates[`transactions/${userId}`] = null;
+    updates[`checklists/${userId}`] = null;
     
     await update(ref(db), updates);
   },
@@ -149,6 +150,7 @@ export const firebaseService = {
     updates[`assets/${userId}`] = toObject(state.assets);
     updates[`receivables/${userId}`] = toObject(state.receivables);
     updates[`loans/${userId}`] = toObject(state.loans);
+    updates[`checklists/${userId}`] = toObject(state.checklists);
 
     await update(ref(db), updates);
   },
@@ -180,6 +182,7 @@ export const firebaseService = {
     updates[`assets/${userId}`] = toObject(state.assets);
     updates[`receivables/${userId}`] = toObject(state.receivables);
     updates[`loans/${userId}`] = toObject(state.loans);
+    updates[`checklists/${userId}`] = toObject(state.checklists);
     updates[`users/${userId}/availablePeriods`] = cleanData(state.availablePeriods);
     
     // Sync transactions with bucketing
@@ -198,6 +201,24 @@ export const firebaseService = {
     await update(ref(db), updates);
   },
 
+  updateChecklists: async (userId: string, checklists: any[]) => {
+    const listRef = ref(db, `checklists/${userId}`);
+    const data = checklists.reduce((acc, item) => {
+      acc[item.id] = cleanData(item);
+      return acc;
+    }, {});
+    await set(listRef, data);
+  },
+  listenToChecklists: (userId: string, callback: (data: any[]) => void) => {
+    const listRef = ref(db, `checklists/${userId}`);
+    return onValue(listRef, (snapshot) => {
+      const data: any[] = [];
+      snapshot.forEach((child) => {
+        data.push({ id: child.key, ...child.val() });
+      });
+      callback(data);
+    });
+  },
   listenToUserData: (userId: string, callback: (data: any) => void) => {
     const userRef = ref(db, `users/${userId}`);
     return onValue(userRef, (snapshot) => {

@@ -16,7 +16,8 @@ import {
   Banknote, 
   Handshake, 
   CreditCard, 
-  Menu 
+  Menu,
+  CheckSquare
 } from 'lucide-react';
 import { useFinanceStore } from '@/lib/store';
 
@@ -208,6 +209,16 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
+        <Link 
+          href="/routines" 
+          className={navItemClass(pathname === '/routines')}
+          title={isCollapsed ? "Rutinitas" : ""}
+        >
+          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
+            <CheckSquare className={iconClass(pathname === '/routines')}/>
+            {!isCollapsed && <span>Rutinitas</span>}
+          </div>
+        </Link>
         <Link 
           href="/settings" 
           className={navItemClass(pathname === '/settings')}

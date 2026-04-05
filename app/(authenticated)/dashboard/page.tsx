@@ -3,6 +3,7 @@
 import { SummaryCard } from '@/components/dashboard/SummaryCard';
 import { CashPositionMap } from '@/components/dashboard/CashPositionMap';
 import { AssetPositionMap } from '@/components/dashboard/AssetPositionMap';
+import { RoutineWidget } from '@/components/dashboard/RoutineWidget';
 import { useFinanceStore } from '@/lib/store';
 
 export default function DashboardPage() {
@@ -43,14 +44,18 @@ export default function DashboardPage() {
 
       <div className="space-y-6 sm:space-y-8">
         <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <RoutineWidget />
+        </section>
+
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
           <SummaryCard />
         </section>
         
-        <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
           <CashPositionMap />
         </section>
         
-        <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
           <AssetPositionMap />
         </section>
       </div>

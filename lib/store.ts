@@ -71,6 +71,13 @@ export type Loan = {
   isActive?: boolean;
 };
 
+export type ChecklistItem = {
+  id: string;
+  title: string;
+  estimatedAmount: number;
+  lastCompletedMonth: string; // Format: 'YYYY-MM'
+};
+
 export interface ToastMessage {
   id: string;
   message: string;
@@ -92,6 +99,7 @@ interface FinanceState {
   loans: Loan[];
   assets: Asset[];
   transactions: Transaction[];
+  checklists: ChecklistItem[];
   availablePeriods: { [year: string]: string[] };
   isLoggedIn: boolean;
   userId: string | null;
@@ -122,6 +130,7 @@ interface FinanceState {
   setReceivables: (data: any[]) => void;
   setLoans: (data: any[]) => void;
   setTransactions: (data: any[]) => void;
+  setChecklists: (data: any[]) => void;
   setAvailablePeriods: (data: { [year: string]: string[] }) => void;
 
   // Actions
@@ -154,6 +163,13 @@ interface FinanceState {
   updateLoanAmount: (id: string, newAmount: number) => void;
   setThreshold: (val: number) => void;
   setThresholdCalculator: (cost: number, condition: string) => void;
+  
+  // Checklist Actions
+  addChecklist: (title: string, estimatedAmount: number) => void;
+  editChecklist: (id: string, title: string, estimatedAmount: number) => void;
+  deleteChecklist: (id: string) => void;
+  toggleChecklist: (id: string, monthStr: string) => void;
+
   logout: () => void;
   toggleSidebarCollapse: () => void;
   resetData: () => void;
@@ -181,6 +197,7 @@ export const useFinanceStore = create<FinanceState>()(
       loans: [],
       assets: [],
       transactions: [],
+      checklists: [],
       availablePeriods: {},
       isLoggedIn: false,
       userId: null,
@@ -265,6 +282,7 @@ export const useFinanceStore = create<FinanceState>()(
         });
         set({ transactions: data, stats: { income, expense } });
       },
+      setChecklists: (data) => set({ checklists: data }),
       setAvailablePeriods: (data) => set({ availablePeriods: data }),
 
       setLoggedIn: (val, uid) => set({ isLoggedIn: val, userId: uid || null }),
@@ -592,6 +610,58 @@ export const useFinanceStore = create<FinanceState>()(
         if (userId) firebaseService.updateUserSettings(userId, { monthlyLivingCost: cost, livingCondition: condition });
       },
 
+      // Checklist Actions
+      addChecklist: (title, estimatedAmount) => {
+        set((state) => {
+          const newChecklist = {
+            id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            title,
+            estimatedAmount,
+            lastCompletedMonth: ''
+          };
+          const newState = { checklists: [...state.checklists, newChecklist] };
+          if (state.userId) firebaseService.updateChecklists(state.userId, newState.checklists);
+          return newState;
+        });
+      },
+      editChecklist: (id, title, estimatedAmount) => {
+        set((state) => {
+          const newState = {
+            checklists: state.checklists.map(c => 
+              c.id === id ? { ...c, title, estimatedAmount } : c
+            )
+          };
+          if (state.userId) firebaseService.updateChecklists(state.userId, newState.checklists);
+          return newState;
+        });
+      },
+      deleteChecklist: (id) => {
+        set((state) => {
+          const newState = {
+            checklists: state.checklists.filter(c => c.id !== id)
+          };
+          if (state.userId) firebaseService.updateChecklists(state.userId, newState.checklists);
+          return newState;
+        });
+      },
+      toggleChecklist: (id, monthStr) => {
+        set((state) => {
+          const newState = {
+            checklists: state.checklists.map(c => {
+              if (c.id === id) {
+                if (c.lastCompletedMonth === monthStr) {
+                  return { ...c, lastCompletedMonth: '' };
+                }
+                return { ...c, lastCompletedMonth: monthStr };
+              }
+              return c;
+            })
+          };
+          if (state.userId) firebaseService.updateChecklists(state.userId, newState.checklists);
+          return newState;
+        });
+      },
+
       logout: () => {
         set({ isLoggedIn: false, userId: null });
         import('./firebase').then(({ auth }) => {
@@ -618,6 +688,7 @@ export const useFinanceStore = create<FinanceState>()(
         loans: [],
         assets: [],
         transactions: [],
+        checklists: [],
         availablePeriods: {},
       }),
     }),

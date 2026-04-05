@@ -28,6 +28,7 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
     setReceivables,
     setLoans,
     setTransactions,
+    setChecklists,
     setAvailablePeriods,
     currentYear,
     currentMonth
@@ -71,6 +72,7 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
       const unsubAssets = firebaseService.listenToAssets(userId, handleData(setAssets));
       const unsubReceivables = firebaseService.listenToReceivables(userId, handleData(setReceivables));
       const unsubLoans = firebaseService.listenToLoans(userId, handleData(setLoans));
+      const unsubChecklists = firebaseService.listenToChecklists(userId, handleData(setChecklists));
       const unsubPeriods = firebaseService.listenToAvailablePeriods(userId, handleData(setAvailablePeriods));
 
       return () => {
@@ -79,10 +81,11 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
         unsubAssets();
         unsubReceivables();
         unsubLoans();
+        unsubChecklists();
         unsubPeriods();
       };
     }
-  }, [isLoggedIn, userId, setUserData, setCashPositions, setAssets, setReceivables, setLoans, setAvailablePeriods]);
+  }, [isLoggedIn, userId, setUserData, setCashPositions, setAssets, setReceivables, setLoans, setChecklists, setAvailablePeriods]);
 
   // Sync Transactions (Depends on currentYear and currentMonth)
   useEffect(() => {
