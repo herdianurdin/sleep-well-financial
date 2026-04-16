@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Clock, ArrowUpRight, ArrowDownRight, RefreshCw, Search, Filter, Calendar, ChevronRight, ChevronDown, Info } from 'lucide-react';
+import { Clock, ArrowUpRight, ArrowDownRight, RefreshCw, Search, Filter, Calendar, ChevronRight, ChevronDown, Info, Download } from 'lucide-react';
 import { useFinanceStore, Transaction } from '@/lib/store';
 import { formatCurrency } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { TransactionDetailModal } from './TransactionDetailModal';
+import { ConfirmationModal } from '../ui/ConfirmationModal';
+import * as XLSX from 'xlsx';
 
 export function TransactionList() {
-  const { transactions, currentYear, currentMonth, setCurrentDate, availablePeriods } = useFinanceStore();
+  const { transactions, currentYear, currentMonth, setCurrentDate, availablePeriods, showToast } = useFinanceStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('Semua');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   
   // Date Filtering State
   const selectedMonth = currentMonth - 1; // 0-indexed for UI
@@ -119,6 +122,42 @@ export function TransactionList() {
     'Jual Aset'
   ];
 
+  const executeExportExcel = () => {
+    try {
+      const dataToExport = filteredTransactions.map(trx => ({
+        'Waktu Transaksi': formatDate(trx.date),
+        'Tipe Transaksi': trx.type,
+        'Pos Asal': trx.posAsal || '-',
+        'Pos Tujuan': trx.posTujuan || '-',
+        'Nominal (Rp)': trx.nominal,
+        'Untung/Rugi (Rp)': trx.profitOrLoss || 0,
+        'Catatan': trx.notes || '-'
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Transaksi');
+      
+      const fileName = `Export_Transaksi_${months[selectedMonth]}_${selectedYear}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+      
+      showToast('Berhasil mengekspor transaksi ke Excel', 'success');
+      setIsExportModalOpen(false);
+    } catch (error) {
+      console.error('Export error:', error);
+      showToast('Gagal mengekspor transaksi', 'error');
+      setIsExportModalOpen(false);
+    }
+  };
+
+  const handleExportClick = () => {
+    if (filteredTransactions.length === 0) {
+      showToast('Tidak ada transaksi untuk diekspor', 'info');
+      return;
+    }
+    setIsExportModalOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Detail Modal */}
@@ -130,6 +169,14 @@ export function TransactionList() {
           />
         )}
       </AnimatePresence>
+
+      <ConfirmationModal
+        isOpen={isExportModalOpen}
+        type="export"
+        data={{ name: `Data Transaksi ${months[selectedMonth]} ${selectedYear} (${filteredTransactions.length} transaksi)` }}
+        onConfirm={executeExportExcel}
+        onCancel={() => setIsExportModalOpen(false)}
+      />
 
       {/* Search and Filter Bar */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
@@ -159,49 +206,60 @@ export function TransactionList() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-50 dark:border-slate-800/50">
-          <div className="flex items-center space-x-3">
-            <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-            <div className="flex items-center space-x-1">
-              <select 
-                className="text-[11px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none bg-transparent cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors"
-                value={selectedMonth}
-                onChange={(e) => {
-                  setCurrentDate(selectedYear, parseInt(e.target.value) + 1);
-                  setItemsPerPage(10);
-                }}
-              >
-                {availableMonths.length > 0 ? (
-                  availableMonths.map((m) => (
-                    <option key={m} value={m - 1} className="bg-white dark:bg-slate-900">
-                      {months[m - 1]}
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center space-x-3">
+              <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+              <div className="flex items-center space-x-1">
+                <select 
+                  className="text-[11px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none bg-transparent cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors"
+                  value={selectedMonth}
+                  onChange={(e) => {
+                    setCurrentDate(selectedYear, parseInt(e.target.value) + 1);
+                    setItemsPerPage(10);
+                  }}
+                >
+                  {availableMonths.length > 0 ? (
+                    availableMonths.map((m) => (
+                      <option key={m} value={m - 1} className="bg-white dark:bg-slate-900">
+                        {months[m - 1]}
+                      </option>
+                    ))
+                  ) : (
+                    <option value={selectedMonth} className="bg-white dark:bg-slate-900">
+                      {months[selectedMonth]}
                     </option>
-                  ))
-                ) : (
-                  <option value={selectedMonth} className="bg-white dark:bg-slate-900">
-                    {months[selectedMonth]}
-                  </option>
-                )}
-              </select>
-              <select 
-                className="text-[11px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none bg-transparent cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors"
-                value={selectedYear}
-                onChange={(e) => {
-                  const newYear = parseInt(e.target.value);
-                  const monthsInNewYear = (availablePeriods || {})[newYear.toString()] || [];
-                  let newMonth = currentMonth;
-                  if (monthsInNewYear.length > 0 && !monthsInNewYear.includes(currentMonth.toString().padStart(2, '0'))) {
-                    newMonth = parseInt(monthsInNewYear[monthsInNewYear.length - 1]);
-                  }
-                  setCurrentDate(newYear, newMonth);
-                  setItemsPerPage(10);
-                }}
-              >
-                {availableYears.map(year => (
-                  <option key={year} value={year} className="bg-white dark:bg-slate-900">{year}</option>
-                ))}
-              </select>
+                  )}
+                </select>
+                <select 
+                  className="text-[11px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none bg-transparent cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors"
+                  value={selectedYear}
+                  onChange={(e) => {
+                    const newYear = parseInt(e.target.value);
+                    const monthsInNewYear = (availablePeriods || {})[newYear.toString()] || [];
+                    let newMonth = currentMonth;
+                    if (monthsInNewYear.length > 0 && !monthsInNewYear.includes(currentMonth.toString().padStart(2, '0'))) {
+                      newMonth = parseInt(monthsInNewYear[monthsInNewYear.length - 1]);
+                    }
+                    setCurrentDate(newYear, newMonth);
+                    setItemsPerPage(10);
+                  }}
+                >
+                  {availableYears.map(year => (
+                    <option key={year} value={year} className="bg-white dark:bg-slate-900">{year}</option>
+                  ))}
+                </select>
+              </div>
             </div>
+            
+            <button 
+              onClick={handleExportClick}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50 rounded-lg text-[10px] font-bold transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export Excel</span>
+            </button>
           </div>
+          
           <div className="text-[9px] uppercase tracking-widest text-slate-400 dark:text-slate-500 font-bold">
             {paginatedTransactions.length} / {filteredTransactions.length} Transaksi
           </div>
