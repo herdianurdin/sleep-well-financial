@@ -10,40 +10,29 @@ export function SummaryCard() {
   
   const mainWallet = state.cashPositions.find((p: any) => p.id === state.mainWalletId) || state.cashPositions[0];
   // Calculate Defense & Surplus based on Tags
-  const isUsingTags = state.cashPositions.some(p => p.tags && p.tags.length > 0);
-  const mainWalletBalance = mainWallet ? mainWallet.balance : 0;
+  const defenseWallets = state.cashPositions.filter(p => p.tags?.includes('Dana Darurat') && p.isActive !== false);
+  const amunisiWallets = state.cashPositions.filter(p => p.tags?.includes('Uang Bebas') && p.isActive !== false);
+  const isUsingTags = defenseWallets.length > 0 || amunisiWallets.length > 0;
+  
+  const mainWalletBalance = mainWallet?.isActive !== false ? (mainWallet?.balance || 0) : 0;
 
   let emergencyFundBalance = 0;
   let surplus = 0;
   let primaryBalance = 0;
 
-  if (isUsingTags) {
-    // Collect all wallets strictly designated for Dana Darurat
-    const defenseWallets = state.cashPositions.filter(p => p.tags?.includes('Dana Darurat') && p.isActive !== false);
+  if (defenseWallets.length > 0) {
     emergencyFundBalance = defenseWallets.reduce((sum, p) => sum + p.balance, 0);
-
-    // Collect all wallets designated for Uang Bebas
-    const amunisiWallets = state.cashPositions.filter(p => p.tags?.includes('Uang Bebas') && p.isActive !== false);
-    const totalAmunisiFromTags = amunisiWallets.reduce((sum, p) => sum + p.balance, 0);
-
-    // If Uang Bebas overlaps with Dana Darurat (Mixed use account like BRI), 
-    // its balance is ALREADY counted in emergencyFundBalance.
-    // The "Surplus" should be: (Total Dana Darurat Balance - Threshold) 
-    // PLUS any balance from wallets that are strictly "Uang Bebas" but NOT "Dana Darurat".
-    const strictAmunisiWallets = amunisiWallets.filter(p => !p.tags?.includes('Dana Darurat'));
-    const strictAmunisiBalance = strictAmunisiWallets.reduce((sum, p) => sum + p.balance, 0);
-    
-    surplus = (emergencyFundBalance - state.threshold) + strictAmunisiBalance;
-
-    // primaryBalance for health score is based strictly on Dana Darurat
     primaryBalance = emergencyFundBalance;
   } else {
-    // Fallback: Legacy mode
     primaryBalance = mainWalletBalance;
-    surplus = primaryBalance - state.threshold;
   }
 
-  // Calculate Health Score (0-100) based on primaryBalance (Emergency Fund)
+  const strictAmunisiWallets = amunisiWallets.filter(p => !p.tags?.includes('Dana Darurat'));
+  const strictAmunisiBalance = strictAmunisiWallets.reduce((sum, p) => sum + p.balance, 0);
+
+  surplus = (primaryBalance - state.threshold) + strictAmunisiBalance;
+
+  // Calculate Health Score (0-100) based on primaryBalance (Emergency/Main)
   let healthScore = 0;
   if (state.threshold > 0) {
     if (primaryBalance >= state.threshold) {

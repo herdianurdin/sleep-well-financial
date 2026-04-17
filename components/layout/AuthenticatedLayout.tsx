@@ -40,8 +40,17 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
   const [showBanner, setShowBanner] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const mainWallet = cashPositions.find(p => p.id === mainWalletId) || cashPositions[0];
-  const isThresholdBreached = mainWallet ? mainWallet.balance < threshold : false;
+  let primaryBalance = 0;
+  const defenseWallets = cashPositions.filter(p => p.tags?.includes('Dana Darurat') && p.isActive !== false);
+  
+  if (defenseWallets.length > 0) {
+    primaryBalance = defenseWallets.reduce((sum, p) => sum + p.balance, 0);
+  } else {
+    const mainWallet = cashPositions.find(p => p.id === mainWalletId) || cashPositions[0];
+    primaryBalance = mainWallet?.isActive !== false ? (mainWallet?.balance || 0) : 0;
+  }
+
+  const isThresholdBreached = threshold > 0 && primaryBalance < threshold;
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -164,7 +173,7 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
             >
               <div className="flex items-center space-x-2">
                 <TriangleAlert className="w-4 h-4" />
-                <span>Peringatan: Saldo dompet utama Anda di bawah batas aman (Threshold)!</span>
+                <span>Peringatan: Saldo uang pertahanan (Dana Darurat) Anda di bawah batas aman (Threshold)!</span>
               </div>
               <button onClick={() => setShowBanner(false)} className="p-1 hover:bg-white/10 rounded-full transition-colors">
                 <X className="w-4 h-4" />
