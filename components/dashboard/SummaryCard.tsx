@@ -9,28 +9,57 @@ export function SummaryCard() {
   const state = useFinanceStore();
   
   const mainWallet = state.cashPositions.find((p: any) => p.id === state.mainWalletId) || state.cashPositions[0];
+  // Calculate Defense & Surplus based on Tags
+  const isUsingTags = state.cashPositions.some(p => p.tags && p.tags.length > 0);
   const mainWalletBalance = mainWallet ? mainWallet.balance : 0;
-  const surplus = mainWalletBalance - state.threshold;
 
-  // Calculate Health Score (0-100) based on Main Wallet
+  let emergencyFundBalance = 0;
+  let surplus = 0;
+  let primaryBalance = 0;
+
+  if (isUsingTags) {
+    // Collect all wallets strictly designated for Dana Darurat
+    const defenseWallets = state.cashPositions.filter(p => p.tags?.includes('Dana Darurat') && p.isActive !== false);
+    emergencyFundBalance = defenseWallets.reduce((sum, p) => sum + p.balance, 0);
+
+    // Collect all wallets designated for Uang Bebas
+    const amunisiWallets = state.cashPositions.filter(p => p.tags?.includes('Uang Bebas') && p.isActive !== false);
+    const totalAmunisiFromTags = amunisiWallets.reduce((sum, p) => sum + p.balance, 0);
+
+    // If Uang Bebas overlaps with Dana Darurat (Mixed use account like BRI), 
+    // its balance is ALREADY counted in emergencyFundBalance.
+    // The "Surplus" should be: (Total Dana Darurat Balance - Threshold) 
+    // PLUS any balance from wallets that are strictly "Uang Bebas" but NOT "Dana Darurat".
+    const strictAmunisiWallets = amunisiWallets.filter(p => !p.tags?.includes('Dana Darurat'));
+    const strictAmunisiBalance = strictAmunisiWallets.reduce((sum, p) => sum + p.balance, 0);
+    
+    surplus = (emergencyFundBalance - state.threshold) + strictAmunisiBalance;
+
+    // primaryBalance for health score is based strictly on Dana Darurat
+    primaryBalance = emergencyFundBalance;
+  } else {
+    // Fallback: Legacy mode
+    primaryBalance = mainWalletBalance;
+    surplus = primaryBalance - state.threshold;
+  }
+
+  // Calculate Health Score (0-100) based on primaryBalance (Emergency Fund)
   let healthScore = 0;
   if (state.threshold > 0) {
-    if (mainWalletBalance >= state.threshold) {
-      // If balance is at threshold, score is 50. If balance is 2x threshold, score is 100.
-      const surplusRatio = (mainWalletBalance - state.threshold) / state.threshold;
+    if (primaryBalance >= state.threshold) {
+      const surplusRatio = (primaryBalance - state.threshold) / state.threshold;
       healthScore = Math.min(100, 50 + (surplusRatio * 50));
     } else {
-      // If balance is 0, score is 0. If balance is at threshold, score is 50.
-      healthScore = (mainWalletBalance / state.threshold) * 50;
+      healthScore = (primaryBalance / state.threshold) * 50;
     }
-  } else if (mainWalletBalance > 0) {
+  } else if (primaryBalance > 0) {
     healthScore = 100;
   } else {
     healthScore = 0;
   }
 
-  const isWarning = mainWalletBalance <= state.threshold;
-  const isNearWarning = mainWalletBalance <= state.threshold * 1.1 && mainWalletBalance > state.threshold;
+  const isWarning = primaryBalance <= state.threshold;
+  const isNearWarning = primaryBalance <= state.threshold * 1.1 && primaryBalance > state.threshold;
 
   const getStatusTheme = () => {
     if (isWarning) return {
@@ -113,7 +142,10 @@ export function SummaryCard() {
                 {mask(surplus)}
               </div>
               <p className="text-[10px] sm:text-xs text-slate-500 font-medium">
-                Saldo <span className="text-slate-300">{mainWallet?.name || 'Kas Utama'}</span> dikurangi Threshold
+                {isUsingTags 
+                  ? <span>Total surplus dari seluruh <span className="text-slate-300">Posisi Kas</span> Anda</span>
+                  : <span>Saldo <span className="text-slate-300">{mainWallet?.name || 'Kas Utama'}</span> dikurangi Threshold</span>
+                }
               </p>
             </div>
           </div>
@@ -142,9 +174,11 @@ export function SummaryCard() {
               <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-blue-500/10 shrink-0">
                 <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
               </div>
-              <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider truncate">Saldo Utama</span>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider truncate">
+                {isUsingTags ? 'Dana Pertahanan' : 'Saldo Utama'}
+              </span>
             </div>
-            <span className="text-xs sm:text-sm font-bold text-white ml-2 shrink-0">{mask(mainWalletBalance)}</span>
+            <span className="text-xs sm:text-sm font-bold text-white ml-2 shrink-0">{mask(primaryBalance)}</span>
           </div>
           <div className="flex items-center justify-between bg-white/5 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/5 overflow-hidden">
             <div className="flex items-center space-x-3 min-w-0">

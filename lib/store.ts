@@ -21,6 +21,7 @@ export type CashPosition = {
   balance: number;
   type?: string;
   isActive?: boolean;
+  tags?: ('Dana Darurat' | 'Uang Bebas' | 'Operasional')[];
 };
 
 export type Asset = {
@@ -143,9 +144,9 @@ interface FinanceState {
   setOnlineStatus: (status: boolean) => void;
   setLoading: (status: boolean) => void;
   addTransaction: (data: any) => void;
-  addCashPosition: (name: string, type?: string) => void;
+  addCashPosition: (name: string, type?: string, tags?: ('Dana Darurat' | 'Uang Bebas' | 'Operasional')[]) => void;
   deleteCashPosition: (id: string) => void;
-  editCashPosition: (id: string, newName: string) => void;
+  editCashPosition: (id: string, newName: string, tags?: ('Dana Darurat' | 'Uang Bebas' | 'Operasional')[]) => void;
   toggleCashPositionStatus: (id: string, isActive: boolean) => void;
   setMainWallet: (id: string) => void;
   addAsset: (name: string, type: string, subType?: string) => void;
@@ -433,9 +434,9 @@ export const useFinanceStore = create<FinanceState>()(
         }
       },
 
-      addCashPosition: (name, type = 'bank') => {
+      addCashPosition: (name, type = 'bank', tags) => {
         const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        const newData = { id, name, balance: 0, type, isActive: true };
+        const newData = { id, name, balance: 0, type, isActive: true, tags };
         set((state) => ({ cashPositions: [...state.cashPositions, newData] }));
         const { userId } = useFinanceStore.getState();
         if (userId) firebaseService.addCashPosition(userId, newData);
@@ -447,10 +448,10 @@ export const useFinanceStore = create<FinanceState>()(
         if (userId) firebaseService.deleteCashPosition(userId, id);
       },
 
-      editCashPosition: (id, newName) => {
-        set((state) => ({ cashPositions: state.cashPositions.map(p => p.id === id ? { ...p, name: newName } : p) }));
+      editCashPosition: (id, newName, tags) => {
+        set((state) => ({ cashPositions: state.cashPositions.map(p => p.id === id ? { ...p, name: newName, tags } : p) }));
         const { userId } = useFinanceStore.getState();
-        if (userId) firebaseService.updateCashPosition(userId, id, { name: newName });
+        if (userId) firebaseService.updateCashPosition(userId, id, { name: newName, tags });
       },
 
       toggleCashPositionStatus: (id, isActive) => {

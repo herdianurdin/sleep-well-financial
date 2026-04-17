@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Landmark, PowerOff } from 'lucide-react';
+import { Landmark, PowerOff, ShieldAlert, Zap, Layers, Check, Star } from 'lucide-react';
 import { useFinanceStore } from '@/lib/store';
 import { CashForm } from '@/components/manage-cash/CashForm';
 import { CashList } from '@/components/manage-cash/CashList';
@@ -16,9 +16,16 @@ export default function ManageCashPage() {
   // Modals state
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
-    type: 'add' | 'edit' | 'delete' | 'deactivate' | 'setMain';
+    type: 'add' | 'edit' | 'delete' | 'deactivate';
     data: any;
   }>({ isOpen: false, type: 'add', data: null });
+
+  const [tagModal, setTagModal] = useState<{
+    isOpen: boolean;
+    pos: any;
+    selectedTags: ('Dana Darurat' | 'Uang Bebas' | 'Operasional')[];
+    isMainWallet: boolean;
+  }>({ isOpen: false, pos: null, selectedTags: [], isMainWallet: false });
 
   const isNameUnique = (name: string, list: any[], excludeId: string | null = null) => {
     return !list.some(item => item.name.toLowerCase() === name.toLowerCase() && item.id !== excludeId);
@@ -28,7 +35,7 @@ export default function ManageCashPage() {
     return state.transactions.some((t: any) => t.posAsal === name || t.posTujuan === name);
   };
 
-  const handleAddCash = (name: string, type: string) => {
+  const handleAddCash = (name: string, type: string, tags?: ('Dana Darurat' | 'Uang Bebas' | 'Operasional')[]) => {
     if (!isNameUnique(name, state.cashPositions)) {
       setErrorMsg(`Nama kas "${name}" sudah digunakan!`);
       return;
@@ -38,11 +45,11 @@ export default function ManageCashPage() {
     setConfirmModal({
       isOpen: true,
       type: 'add',
-      data: { name, type }
+      data: { name, type, tags }
     });
   };
 
-  const handleEditCash = (id: string, newName: string) => {
+  const handleEditCash = (id: string, newName: string, tags?: ('Dana Darurat' | 'Uang Bebas' | 'Operasional')[]) => {
     const name = newName.trim();
     if (!name) return;
 
@@ -54,17 +61,37 @@ export default function ManageCashPage() {
     setConfirmModal({
       isOpen: true,
       type: 'edit',
-      data: { id, name }
+      data: { id, name, tags }
     });
     setErrorMsg('');
   };
 
-  const handleSetMainWallet = (id: string) => {
-    setConfirmModal({
+  const handleOpenTagModal = (pos: any) => {
+    setTagModal({
       isOpen: true,
-      type: 'setMain',
-      data: { id }
+      pos,
+      selectedTags: pos.tags || [],
+      isMainWallet: pos.id === state.mainWalletId
     });
+  };
+
+  const handleSaveTags = () => {
+    if (!tagModal.pos) return;
+    editCashPosition(tagModal.pos.id, tagModal.pos.name, tagModal.selectedTags);
+    if (tagModal.isMainWallet && tagModal.pos.id !== state.mainWalletId) {
+      setMainWallet(tagModal.pos.id);
+    }
+    showToast(`Peruntukan kas "${tagModal.pos.name}" berhasil diperbarui`, 'success');
+    setTagModal({ isOpen: false, pos: null, selectedTags: [], isMainWallet: false });
+  };
+
+  const toggleModalTag = (tag: 'Dana Darurat' | 'Uang Bebas' | 'Operasional') => {
+    setTagModal(prev => ({
+      ...prev,
+      selectedTags: prev.selectedTags.includes(tag) 
+        ? prev.selectedTags.filter(t => t !== tag) 
+        : [...prev.selectedTags, tag]
+    }));
   };
 
   const handleDeleteClick = (id: string) => {
@@ -99,10 +126,10 @@ export default function ManageCashPage() {
     const { type, data } = confirmModal;
 
     if (type === 'add') {
-      addCashPosition(data.name, data.type);
+      addCashPosition(data.name, data.type, data.tags);
       showToast(`Kas "${data.name}" berhasil ditambahkan`, 'success');
     } else if (type === 'edit') {
-      editCashPosition(data.id, data.name);
+      editCashPosition(data.id, data.name, data.tags);
       showToast(`Nama kas berhasil diubah menjadi "${data.name}"`, 'success');
     } else if (type === 'delete') {
       deleteCashPosition(data.id);
@@ -110,9 +137,6 @@ export default function ManageCashPage() {
     } else if (type === 'deactivate') {
       toggleCashPositionStatus(data.id, false);
       showToast(`Kas "${data.name}" berhasil dinonaktifkan`, 'success');
-    } else if (type === 'setMain') {
-      setMainWallet(data.id);
-      showToast(`Kas utama berhasil diubah`, 'success');
     }
 
     setConfirmModal({ isOpen: false, type: 'add', data: null });
@@ -152,7 +176,7 @@ export default function ManageCashPage() {
             cashPositions={state.cashPositions}
             mainWalletId={state.mainWalletId}
             isCashUsed={isCashUsed}
-            onSetMainWallet={handleSetMainWallet}
+            onEditTags={handleOpenTagModal}
             onEdit={handleEditCash}
             onDelete={handleDeleteClick}
             onToggleStatus={toggleCashPositionStatus}
@@ -170,7 +194,6 @@ export default function ManageCashPage() {
               {confirmModal.type === 'edit' && 'Ubah Nama Kas'}
               {confirmModal.type === 'delete' && 'Hapus Posisi Kas'}
               {confirmModal.type === 'deactivate' && 'Hapus Posisi Kas'}
-              {confirmModal.type === 'setMain' && 'Ubah Kas Utama'}
             </h3>
             
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
@@ -178,7 +201,6 @@ export default function ManageCashPage() {
               {confirmModal.type === 'edit' && `Anda yakin ingin mengubah nama kas menjadi ${confirmModal.data.name}?`}
               {confirmModal.type === 'delete' && `Anda yakin ingin menghapus kas ${confirmModal.data.name} secara permanen? Tindakan ini tidak dapat dibatalkan.`}
               {confirmModal.type === 'deactivate' && `Kas ${confirmModal.data.name} sudah memiliki riwayat transaksi. Menghapus kas ini akan merusak data historis. Anda hanya dapat menonaktifkan kas ini agar tidak muncul lagi di pilihan transaksi.`}
-              {confirmModal.type === 'setMain' && 'Anda yakin ingin mengubah Kas Utama (Uang Dingin) ke kas ini? Perhitungan surplus akan menggunakan saldo kas ini.'}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3">
@@ -193,7 +215,6 @@ export default function ManageCashPage() {
                 className={`flex-1 px-4 py-2.5 text-white font-medium rounded-xl transition-colors flex items-center justify-center space-x-2 order-1 sm:order-2 ${
                   confirmModal.type === 'delete' ? 'bg-rose-600 hover:bg-rose-700' :
                   confirmModal.type === 'deactivate' ? 'bg-orange-500 hover:bg-orange-600' :
-                  confirmModal.type === 'setMain' ? 'bg-blue-600 hover:bg-blue-700' :
                   'bg-slate-900 dark:bg-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100'
                 }`}
               >
@@ -203,8 +224,110 @@ export default function ManageCashPage() {
                   {confirmModal.type === 'edit' && 'Simpan'}
                   {confirmModal.type === 'delete' && 'Hapus Permanen'}
                   {confirmModal.type === 'deactivate' && 'Nonaktifkan'}
-                  {confirmModal.type === 'setMain' && 'Ya, Ubah'}
                 </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Tagging Modal */}
+      {tagModal.isOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-[28px] md:rounded-[32px] p-5 md:p-6 w-full max-w-sm shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white mb-1">
+              Peruntukan Kas
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+              Atur komposisi tag untuk <span className="font-bold text-slate-700 dark:text-slate-300">{tagModal.pos?.name}</span>.
+            </p>
+
+            <div className="flex flex-col gap-3 mb-6">
+              <button
+                onClick={() => toggleModalTag('Dana Darurat')}
+                className={`flex items-center space-x-3 p-3 rounded-2xl border text-left transition-all ${
+                  tagModal.selectedTags.includes('Dana Darurat') 
+                    ? 'bg-rose-50 border-rose-200 dark:bg-rose-900/20 dark:border-rose-800/50 shadow-sm' 
+                    : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <div className={`p-2 rounded-xl shrink-0 ${tagModal.selectedTags.includes('Dana Darurat') ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/50 dark:text-rose-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm md:text-base font-bold truncate ${tagModal.selectedTags.includes('Dana Darurat') ? 'text-rose-700 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}`}>Dana Darurat</div>
+                </div>
+                {tagModal.selectedTags.includes('Dana Darurat') && <Check className="w-5 h-5 text-rose-500 shrink-0" />}
+              </button>
+              <button
+                onClick={() => toggleModalTag('Uang Bebas')}
+                className={`flex items-center space-x-3 p-3 rounded-2xl border text-left transition-all ${
+                  tagModal.selectedTags.includes('Uang Bebas') 
+                    ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50 shadow-sm' 
+                    : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <div className={`p-2 rounded-xl shrink-0 ${tagModal.selectedTags.includes('Uang Bebas') ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                  <Zap className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm md:text-base font-bold truncate ${tagModal.selectedTags.includes('Uang Bebas') ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}`}>Uang Bebas</div>
+                </div>
+                {tagModal.selectedTags.includes('Uang Bebas') && <Check className="w-5 h-5 text-emerald-500 shrink-0" />}
+              </button>
+              <button
+                onClick={() => toggleModalTag('Operasional')}
+                className={`flex items-center space-x-3 p-3 rounded-2xl border text-left transition-all ${
+                  tagModal.selectedTags.includes('Operasional') 
+                    ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50 shadow-sm' 
+                    : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <div className={`p-2 rounded-xl shrink-0 ${tagModal.selectedTags.includes('Operasional') ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm md:text-base font-bold truncate ${tagModal.selectedTags.includes('Operasional') ? 'text-blue-700 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>Operasional</div>
+                </div>
+                {tagModal.selectedTags.includes('Operasional') && <Check className="w-5 h-5 text-blue-500 shrink-0" />}
+              </button>
+
+              <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+
+              <button
+                onClick={() => setTagModal(prev => ({ ...prev, isMainWallet: !prev.isMainWallet }))}
+                disabled={tagModal.pos?.id === state.mainWalletId}
+                className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
+                  tagModal.isMainWallet 
+                    ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50 shadow-sm' 
+                    : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                } disabled:opacity-80 disabled:cursor-not-allowed`}
+              >
+                <div className="flex items-center space-x-3 min-w-0">
+                  <div className={`p-2 rounded-xl shrink-0 ${tagModal.isMainWallet ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                    <Star className={`w-5 h-5 ${tagModal.isMainWallet ? 'fill-current' : ''}`} />
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className={`text-sm md:text-base font-bold truncate ${tagModal.isMainWallet ? 'text-amber-700 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'}`}>Set Kas Utama</div>
+                  </div>
+                </div>
+                <div className={`w-10 h-6 shrink-0 rounded-full transition-colors relative flex items-center ${tagModal.isMainWallet ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${tagModal.isMainWallet ? 'left-5' : 'left-1'}`} />
+                </div>
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 mt-auto">
+              <button 
+                onClick={() => setTagModal({ isOpen: false, pos: null, selectedTags: [], isMainWallet: false })}
+                className="flex-1 px-4 py-3 md:py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-sm md:text-base rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors order-2 sm:order-1"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={handleSaveTags}
+                className="flex-1 px-4 py-3 md:py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm md:text-base rounded-2xl shadow-lg hover:bg-slate-800 dark:hover:bg-slate-100 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 order-1 sm:order-2"
+              >
+                Simpan
               </button>
             </div>
           </div>

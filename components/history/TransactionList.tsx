@@ -10,7 +10,18 @@ import { ConfirmationModal } from '../ui/ConfirmationModal';
 import * as XLSX from 'xlsx';
 
 export function TransactionList() {
-  const { transactions, currentYear, currentMonth, setCurrentDate, availablePeriods, showToast } = useFinanceStore();
+  const { 
+    transactions, 
+    currentYear, 
+    currentMonth, 
+    setCurrentDate, 
+    availablePeriods, 
+    showToast,
+    cashPositions,
+    assets,
+    receivables,
+    loans
+  } = useFinanceStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('Semua');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -124,6 +135,9 @@ export function TransactionList() {
 
   const executeExportExcel = () => {
     try {
+      const workbook = XLSX.utils.book_new();
+
+      // 1. Sheet Transaksi
       const dataToExport = filteredTransactions.map(trx => ({
         'Waktu Transaksi': formatDate(trx.date),
         'Tipe Transaksi': trx.type,
@@ -133,19 +147,66 @@ export function TransactionList() {
         'Untung/Rugi (Rp)': trx.profitOrLoss || 0,
         'Catatan': trx.notes || '-'
       }));
+      const worksheetTrx = XLSX.utils.json_to_sheet(dataToExport);
+      XLSX.utils.book_append_sheet(workbook, worksheetTrx, 'Riwayat Transaksi');
 
-      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Transaksi');
+      // 2. Sheet Posisi Kas
+      if (cashPositions && cashPositions.length > 0) {
+        const cashData = cashPositions.map(c => ({
+          'Nama Kas': c.name,
+          'Tipe': c.type || '-',
+          'Saldo (Rp)': c.balance,
+          'Status': c.isActive !== false ? 'Aktif' : 'Nonaktif'
+        }));
+        const wsCash = XLSX.utils.json_to_sheet(cashData);
+        XLSX.utils.book_append_sheet(workbook, wsCash, 'Posisi Kas');
+      }
+
+      // 3. Sheet Investasi & Aset
+      if (assets && assets.length > 0) {
+        const assetData = assets.map(a => ({
+          'Nama Aset': a.name,
+          'Kategori': a.type,
+          'Sub-Kategori': a.subType || '-',
+          'Nilai Saat Ini (Rp)': a.value,
+          'Status': a.isActive !== false ? 'Aktif' : 'Nonaktif'
+        }));
+        const wsAssets = XLSX.utils.json_to_sheet(assetData);
+        XLSX.utils.book_append_sheet(workbook, wsAssets, 'Aset & Investasi');
+      }
+
+      // 4. Sheet Piutang
+      if (receivables && receivables.length > 0) {
+        const receivableData = receivables.map(r => ({
+          'Nama Peminjam': r.name,
+          'Kategori': r.type,
+          'Sisa Piutang (Rp)': r.amount,
+          'Status': r.isActive !== false ? 'Aktif' : 'Nonaktif'
+        }));
+        const wsReceivables = XLSX.utils.json_to_sheet(receivableData);
+        XLSX.utils.book_append_sheet(workbook, wsReceivables, 'Piutang');
+      }
+
+      // 5. Sheet Hutang / Pinjaman
+      if (loans && loans.length > 0) {
+        const loanData = loans.map(l => ({
+          'Nama Pemberi Pinjaman': l.name,
+          'Kategori': l.type,
+          'Sisa Hutang (Rp)': l.amount,
+          'Status': l.isActive !== false ? 'Aktif' : 'Nonaktif'
+        }));
+        const wsLoans = XLSX.utils.json_to_sheet(loanData);
+        XLSX.utils.book_append_sheet(workbook, wsLoans, 'Hutang');
+      }
       
-      const fileName = `Export_Transaksi_${months[selectedMonth]}_${selectedYear}.xlsx`;
+      const fileName = `Export_Keuangan_${months[selectedMonth]}_${selectedYear}.xlsx`;
       XLSX.writeFile(workbook, fileName);
       
-      showToast('Berhasil mengekspor transaksi ke Excel', 'success');
+      showToast('Berhasil mengekspor data laporan ke Excel', 'success');
       setIsExportModalOpen(false);
     } catch (error) {
       console.error('Export error:', error);
-      showToast('Gagal mengekspor transaksi', 'error');
+      showToast('Gagal mengekspor laporan', 'error');
       setIsExportModalOpen(false);
     }
   };
@@ -173,7 +234,7 @@ export function TransactionList() {
       <ConfirmationModal
         isOpen={isExportModalOpen}
         type="export"
-        data={{ name: `Data Transaksi ${months[selectedMonth]} ${selectedYear} (${filteredTransactions.length} transaksi)` }}
+        data={{ name: `Laporan Keuangan ${months[selectedMonth]} ${selectedYear} (beserta seluruh data aset & hutang/piutang)` }}
         onConfirm={executeExportExcel}
         onCancel={() => setIsExportModalOpen(false)}
       />
