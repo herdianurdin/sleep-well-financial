@@ -14,7 +14,7 @@ export default function ManageTransactionsPage() {
     setType(newType);
   };
 
-  const handleSubmit = async (data: { nominal: number; posAsal: string; posTujuan: string; relatedId?: string; date: string; notes?: string; profitOrLoss?: number }) => {
+  const handleSubmit = async (data: { nominal: number; posAsal: string; posTujuan: string; relatedId?: string; date: string; notes?: string; title?: string; profitOrLoss?: number }) => {
     await addTransaction({
       type,
       nominal: data.nominal,
@@ -23,6 +23,7 @@ export default function ManageTransactionsPage() {
       relatedId: data.relatedId,
       date: data.date,
       notes: data.notes,
+      title: data.title,
       profitOrLoss: data.profitOrLoss
     });
     showToast(`Transaksi ${type} berhasil dicatat`, 'success');

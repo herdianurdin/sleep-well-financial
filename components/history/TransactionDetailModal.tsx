@@ -64,6 +64,9 @@ export function TransactionDetailModal({ transaction, onClose }: TransactionDeta
               <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(transaction.type)}`}>
                 {transaction.type}
               </span>
+              <p className="font-bold text-slate-800 dark:text-slate-200 mt-1">
+                {transaction.type === 'Pengeluaran' ? transaction.posTujuan : (transaction.type === 'Pemasukan' ? transaction.posAsal : (transaction.title || transaction.type))}
+              </p>
               <h3 className={`text-3xl font-black tracking-tighter ${
                 transaction.type === 'Pengeluaran' ? 'text-rose-600 dark:text-rose-400' : 
                 transaction.type === 'Pemasukan' ? 'text-emerald-600 dark:text-emerald-400' : 

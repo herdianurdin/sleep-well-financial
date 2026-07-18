@@ -19,6 +19,7 @@ interface TransactionFormProps {
     relatedId?: string;
     date: string;
     notes?: string;
+    title?: string;
     profitOrLoss?: number;
   }) => void | Promise<void>;
 }
@@ -35,6 +36,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
   const [nominal, setNominal] = useState('');
   const [posAsal, setPosAsal] = useState(type === 'Pemasukan' ? 'External' : '');
   const [posTujuan, setPosTujuan] = useState(type === 'Pengeluaran' ? 'Kebutuhan Pokok' : '');
+  const [title, setTitle] = useState('');
   const [relatedId, setRelatedId] = useState('');
   const [date, setDate] = useState(getLocalDateString());
   const [notes, setNotes] = useState('');
@@ -92,6 +94,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
         relatedId: relatedId || undefined,
         date: finalDateIso,
         notes: notes || undefined,
+        title: title || undefined,
         profitOrLoss: profitOrLossValue
       });
 
@@ -103,6 +106,7 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
       setNominal('');
       setPosAsal(type === 'Pemasukan' ? 'External' : '');
       setPosTujuan(type === 'Pengeluaran' ? 'Kebutuhan Pokok' : '');
+      setTitle('');
       setRelatedId('');
       setNotes('');
       setSaleStatus('Impas');
@@ -376,6 +380,22 @@ export function TransactionForm({ type, cashPositions, receivables, loans, asset
                 </div>
               )}
             </>
+          )}
+
+          {/* Title Input for 7 other types */}
+          {type !== 'Pemasukan' && type !== 'Pengeluaran' && (
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                Judul Transaksi / Keterangan
+              </label>
+              <input 
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Contoh: Pembayaran cicilan bulan ke-3"
+                className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white text-sm font-medium text-slate-900 dark:text-white transition-all"
+              />
+            </div>
           )}
 
           {/* Notes Input - Always Visible */}

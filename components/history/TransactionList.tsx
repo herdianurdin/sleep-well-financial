@@ -140,6 +140,7 @@ export function TransactionList() {
       // 1. Sheet Transaksi
       const dataToExport = filteredTransactions.map(trx => ({
         'Waktu Transaksi': formatDate(trx.date),
+        'Judul / Kategori': trx.type === 'Pengeluaran' ? trx.posTujuan : (trx.type === 'Pemasukan' ? trx.posAsal : (trx.title || trx.type)),
         'Tipe Transaksi': trx.type,
         'Pos Asal': trx.posAsal || '-',
         'Pos Tujuan': trx.posTujuan || '-',
@@ -348,15 +349,26 @@ export function TransactionList() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center space-x-2">
-                        <p className="font-bold text-xs md:text-sm text-slate-900 dark:text-slate-100 truncate">{trx.type}</p>
+                        <p className="font-bold text-xs md:text-sm text-slate-900 dark:text-slate-100 truncate">
+                          {trx.type === 'Pengeluaran' ? trx.posTujuan : (trx.type === 'Pemasukan' ? trx.posAsal : (trx.title || trx.type))}
+                        </p>
+                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
+                          trx.type === 'Pemasukan' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                          trx.type === 'Pengeluaran' ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' :
+                          'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                        }`}>
+                          {trx.type}
+                        </span>
                         <Info className="w-3 h-3 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                         {trx.type === 'Mutasi Kas' 
                           ? `${trx.posAsal} → ${trx.posTujuan}`
                           : trx.type === 'Pemasukan'
                           ? `Ke: ${trx.posTujuan}`
-                          : `Dari: ${trx.posAsal} (Untuk: ${trx.posTujuan})`}
+                          : trx.type === 'Pengeluaran'
+                          ? `Dari: ${trx.posAsal}`
+                          : `Dari: ${trx.posAsal} → Ke: ${trx.posTujuan}`}
                       </p>
                       {trx.notes && (
                         <p className="text-[10px] text-slate-600 dark:text-slate-300 mt-0.5 italic truncate max-w-[180px] md:max-w-xs">&quot;{trx.notes}&quot;</p>

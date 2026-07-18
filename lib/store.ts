@@ -42,6 +42,7 @@ export type Transaction = {
   relatedId?: string; // ID of Receivable, Loan, or Asset
   date: string;
   notes?: string;
+  title?: string;
   profitOrLoss?: number;
   timestamp?: number;
 };
@@ -319,7 +320,7 @@ export const useFinanceStore = create<FinanceState>()(
 
       addTransaction: async (data) => {
         const state = useFinanceStore.getState();
-        const { type, nominal, posAsal, posTujuan, relatedId, date, notes, profitOrLoss } = data;
+        const { type, nominal, posAsal, posTujuan, relatedId, date, notes, profitOrLoss, title } = data;
         const transactionDate = date || new Date().toISOString();
         const d = new Date(transactionDate);
         const year = d.getFullYear().toString();
@@ -334,6 +335,7 @@ export const useFinanceStore = create<FinanceState>()(
           relatedId,
           date: transactionDate,
           notes,
+          title,
           profitOrLoss,
           timestamp: Date.now()
         };
